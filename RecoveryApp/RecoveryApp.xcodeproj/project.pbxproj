@@ -247,6 +247,7 @@
 				DEVELOPMENT_TEAM = 9HWYXWWHM4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Hushtide;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "RecoveryApp reads your sleep, workouts, heart rate variability and resting heart rate from Apple Health to calculate your daily readiness and recovery.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "RecoveryApp saves the workouts you log in the app to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -282,6 +283,7 @@
 				DEVELOPMENT_TEAM = 9HWYXWWHM4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Hushtide;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "RecoveryApp reads your sleep, workouts, heart rate variability and resting heart rate from Apple Health to calculate your daily readiness and recovery.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "RecoveryApp saves the workouts you log in the app to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
