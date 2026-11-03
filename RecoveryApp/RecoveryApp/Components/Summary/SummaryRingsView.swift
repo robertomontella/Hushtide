@@ -86,7 +86,7 @@ public struct SummaryRingsView: View {
     ) -> some View {
         let strokeW: CGFloat = appHighContrast ? (strokeWidth + 2) : strokeWidth
         
-        return ZStack {
+        ZStack {
             // Full background track circle in soft pastel tint (enhanced in high contrast)
             Circle()
                 .stroke(appHighContrast ? trackColor.opacity(0.85) : trackColor, lineWidth: strokeW)

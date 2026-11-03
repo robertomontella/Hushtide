@@ -50,7 +50,7 @@ public struct ReadinessRingView: View {
     public var body: some View {
         let strokeW: CGFloat = appHighContrast ? 18.0 : 13.5
         
-        return ZStack {
+        ZStack {
             // Background Inactive Track (Full 240° Arc from 150° to 30°)
             ReadinessArcShape(strokeWidth: strokeW)
                 .stroke(

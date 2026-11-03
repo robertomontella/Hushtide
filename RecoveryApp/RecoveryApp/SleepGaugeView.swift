@@ -26,7 +26,7 @@ public struct SleepGaugeView: View {
     public var body: some View {
         let strokeW: CGFloat = appHighContrast ? 18 : 15
         
-        return ZStack {
+        ZStack {
             // Background Inactive Track
             Circle()
                 .stroke(appHighContrast ? trackColor.opacity(0.8) : trackColor, lineWidth: strokeW)
