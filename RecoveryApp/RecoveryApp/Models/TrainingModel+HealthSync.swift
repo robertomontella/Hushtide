@@ -256,9 +256,11 @@ extension TrainingModel {
                         $0.title.localizedCaseInsensitiveContains("22:00") ||
                         $0.title.localizedCaseInsensitiveContains("bed at 22")
                     }) {
-                        // Bedtime at 23:00 or after 22:00 -> box is not checked
-                        let isLate = (bHour24 >= 23 || (bHour24 == 22 && bMin > 15) || bHour24 < 12)
-                        dayChecks[cIdx].isChecked = !isLate
+                        // Bedtime at 23:00 or after 22:00 -> box is not checked by default, preserving user manual ticks
+                        if !dayChecks[cIdx].isManuallySet {
+                            let isLate = (bHour24 >= 23 || (bHour24 == 22 && bMin > 15) || bHour24 < 12)
+                            dayChecks[cIdx].isChecked = !isLate
+                        }
                     }
                     
                     sleepModel.weeklyRecords[offset] = DaySleepRecord(

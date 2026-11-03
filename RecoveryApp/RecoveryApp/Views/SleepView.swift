@@ -189,7 +189,6 @@ public struct SleepView: View {
             await loadSleepFromHealth()
         }
         .onAppear {
-            sleepModel.checkAndPerformDailyResetIfNeeded()
             sleepModel.targetSleepHours = viewModel.sleepTargetHours
             sleepModel.selectDay(at: calendarModel.selectedDayIndex)
             viewModel.evaluateRecovery()

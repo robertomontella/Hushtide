@@ -14,11 +14,25 @@ public struct SleepCheckmarkItem: Identifiable, Hashable, Codable {
     public let id: UUID
     public var title: String
     public var isChecked: Bool
+    public var isManuallySet: Bool
     
-    public init(id: UUID = UUID(), title: String, isChecked: Bool = false) {
+    public init(id: UUID = UUID(), title: String, isChecked: Bool = false, isManuallySet: Bool = false) {
         self.id = id
         self.title = title
         self.isChecked = isChecked
+        self.isManuallySet = isManuallySet
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, title, isChecked, isManuallySet
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.isChecked = try container.decode(Bool.self, forKey: .isChecked)
+        self.isManuallySet = try container.decodeIfPresent(Bool.self, forKey: .isManuallySet) ?? false
     }
 }
 
@@ -314,6 +328,25 @@ public final class SleepModel {
     // MARK: - Storage Keys
     private enum StorageKeys {
         static let lastCheckmarksResetDate = "RecoveryApp_lastCheckmarksResetDate"
+        static let savedWeeklyRecords = "RecoveryApp_savedWeeklySleepRecords"
+    }
+    
+    // MARK: - Persistent Storage Helpers
+    public func saveWeeklyRecordsToStorage() {
+        if let encoded = try? JSONEncoder().encode(weeklyRecords) {
+            UserDefaults.standard.set(encoded, forKey: StorageKeys.savedWeeklyRecords)
+        }
+    }
+    
+    @discardableResult
+    public func restoreWeeklyRecordsFromStorage() -> Bool {
+        if let data = UserDefaults.standard.data(forKey: StorageKeys.savedWeeklyRecords),
+           let decoded = try? JSONDecoder().decode([DaySleepRecord].self, from: data),
+           decoded.count == 7 {
+            self.weeklyRecords = decoded
+            return true
+        }
+        return false
     }
     
     // MARK: - Recommendations & Checkmarks (Defaults to false: refreshed fresh each day)
@@ -321,8 +354,8 @@ public final class SleepModel {
     public var checkmarksSubtitle: String = "Based on your weekly workouts and daily routine, we recommend that you:"
     
     public var checkmarks: [SleepCheckmarkItem] = [
-        SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
-        SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
+        SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false, isManuallySet: false),
+        SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false, isManuallySet: false)
     ]
     
     // MARK: - Daily Checkmarks Reset
@@ -351,10 +384,12 @@ public final class SleepModel {
     public func resetCheckmarksForNewDay() {
         for i in 0..<checkmarks.count {
             checkmarks[i].isChecked = false
+            checkmarks[i].isManuallySet = false
         }
         for d in 0..<weeklyRecords.count {
             for c in 0..<weeklyRecords[d].checkmarks.count {
                 weeklyRecords[d].checkmarks[c].isChecked = false
+                weeklyRecords[d].checkmarks[c].isManuallySet = false
             }
         }
         lastCheckmarksResetDate = Date()
@@ -363,12 +398,15 @@ public final class SleepModel {
     }
     
     // MARK: - Bedtime Checkmark Auto-Evaluation
-    /// If sleep data indicates going to bed late (at 23:00 or after 22:15), uncheck the box.
+    /// If sleep data indicates going to bed late (at 23:00 or after 22:15), uncheck the box unless manually set by the user.
     public func updateBedtimeCheckmarkCompliance() {
         guard let index = checkmarks.firstIndex(where: {
             $0.title.localizedCaseInsensitiveContains("22:00") ||
             $0.title.localizedCaseInsensitiveContains("bed at 22")
         }) else { return }
+        
+        // Never override a checkmark that was explicitly toggled by the user
+        guard !checkmarks[index].isManuallySet else { return }
         
         // If uninitialized / 0 / no bedtime set, do not force checkmark to true
         guard inBedHour > 0 || asleepHour > 0 else { return }
@@ -393,8 +431,8 @@ public final class SleepModel {
         asleepHour = 0
         asleepMinute = 0
         checkmarks = [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false, isManuallySet: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false, isManuallySet: false)
         ]
         weeklyRecords = (0..<7).map { _ in
             DaySleepRecord(
@@ -405,15 +443,17 @@ public final class SleepModel {
                 asleepMinute: 0,
                 asleepPeriod: .am,
                 checkmarks: [
-                    SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
-                    SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
+                    SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false, isManuallySet: false),
+                    SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false, isManuallySet: false)
                 ]
             )
         }
+        UserDefaults.standard.removeObject(forKey: StorageKeys.savedWeeklyRecords)
     }
     
     // MARK: - Initializer
     public init() {
+        _ = restoreWeeklyRecordsFromStorage()
         checkAndPerformDailyResetIfNeeded()
         updateBedtimeCheckmarkCompliance()
     }
@@ -485,6 +525,7 @@ public final class SleepModel {
         if let index = checkmarks.firstIndex(where: { $0.id == id }) {
             withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                 checkmarks[index].isChecked.toggle()
+                checkmarks[index].isManuallySet = true
                 syncCurrentToRecord()
             }
             onStateChanged?()
@@ -497,7 +538,7 @@ public final class SleepModel {
         HapticManager.notification(.success)
         
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            checkmarks.append(SleepCheckmarkItem(title: trimmed, isChecked: true))
+            checkmarks.append(SleepCheckmarkItem(title: trimmed, isChecked: true, isManuallySet: true))
             syncCurrentToRecord()
         }
         onStateChanged?()
@@ -562,10 +603,8 @@ public final class SleepModel {
             asleepHour = wakeHour
             asleepMinute = wakeMinute
             asleepPeriod = .am
+            syncCurrentToRecord()
         }
-        
-        updateBedtimeCheckmarkCompliance()
-        syncCurrentToRecord()
     }
     
     private func syncCurrentToRecord() {
@@ -584,6 +623,7 @@ public final class SleepModel {
         if selectedDayIndex < weeklySleepMinutes.count {
             weeklySleepMinutes[selectedDayIndex] = mins
         }
+        saveWeeklyRecordsToStorage()
     }
     
     /// Constructs a valid SleepNight for the currently selected day to evaluate recovery dynamically.
