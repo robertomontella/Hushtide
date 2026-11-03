@@ -13,22 +13,19 @@ public struct SleepGaugeView: View {
     public let targetText: String
     public let accentColor: Color
     public let trackColor: Color
-    public var onEditGoal: (() -> Void)? = nil
     
     public init(
         progress: Double,
         durationText: String,
         targetText: String,
         accentColor: Color = Color(red: 0.33, green: 0.36, blue: 1.0),
-        trackColor: Color = Color(red: 0.83, green: 0.83, blue: 0.95),
-        onEditGoal: (() -> Void)? = nil
+        trackColor: Color = Color(red: 0.83, green: 0.83, blue: 0.95)
     ) {
         self.progress = progress
         self.durationText = durationText
         self.targetText = targetText
         self.accentColor = accentColor
         self.trackColor = trackColor
-        self.onEditGoal = onEditGoal
     }
     
     public var body: some View {
@@ -39,7 +36,7 @@ public struct SleepGaugeView: View {
             
             // Foreground Active Progress Arc
             Circle()
-                .trim(from: 0.0, to: CGFloat(max(0.01, min(1.0, progress))))
+                .trim(from: 0.0, to: CGFloat(max(0.0, min(1.0, progress))))
                 .stroke(
                     accentColor,
                     style: StrokeStyle(lineWidth: 15, lineCap: .round)
@@ -55,31 +52,10 @@ public struct SleepGaugeView: View {
                     .contentTransition(.numericText())
                     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: durationText)
                 
-                // Sleep Goal Target (Interactive to edit goal)
-                Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
-                    onEditGoal?()
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(targetText)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.secondary)
-                        
-                        Image(systemName: "pencil")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.secondary.opacity(0.8))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color(uiColor: .systemGray6).opacity(0.7))
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Change sleep goal, currently \(targetText)")
+                // Sleep Goal Target (Read-only static label)
+                Text(targetText)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.secondary)
             }
         }
         .frame(width: 154, height: 154)
@@ -91,8 +67,7 @@ public struct SleepGaugeView: View {
     SleepGaugeView(
         progress: 0.968,
         durationText: "7h 45m",
-        targetText: "of 8h",
-        onEditGoal: {}
+        targetText: "of 8h"
     )
     .padding()
 }

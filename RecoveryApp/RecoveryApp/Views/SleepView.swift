@@ -10,7 +10,7 @@ import SwiftUI
 public struct SleepView: View {
     @Bindable public var viewModel: TrainingModel
     private var sleepModel: SleepModel { viewModel.sleepModel }
-    @State private var calendarModel = CalendarModel()
+    private var calendarModel: CalendarModel { viewModel.calendarModel }
     
     // Calendar Top-Down Drop-Down State
     @State private var isCalendarOpen: Bool = false
@@ -18,10 +18,6 @@ public struct SleepView: View {
     // Time Picker Sheet State
     @State private var editingScheduleType: ScheduleEditType? = nil
     @State private var temporaryTimeSelection: Date = Date()
-    
-    // Sleep Goal Sheet State
-    @State private var isEditingGoalPresented: Bool = false
-    @State private var temporaryGoalSelection: Double = 8.0
     
     // Checkmarks Management Sheet & Edit Alert State
     @State private var isCheckmarksSheetPresented: Bool = false
@@ -103,9 +99,6 @@ public struct SleepView: View {
                             trackColor: sleepModel.trackColor,
                             inBedTime: sleepModel.inBedFullTimeFormatted,
                             asleepTime: sleepModel.asleepFullTimeFormatted,
-                            onEditGoal: {
-                                openGoalEditor()
-                            },
                             onEditInBedTime: {
                                 openTimeEditor(for: .inBed)
                             },
@@ -170,12 +163,6 @@ public struct SleepView: View {
         .sheet(item: $editingScheduleType) { editType in
             timePickerSheet(for: editType)
                 .presentationDetents([.height(300)])
-                .presentationDragIndicator(.visible)
-        }
-        // MARK: - Sleep Goal Sheet
-        .sheet(isPresented: $isEditingGoalPresented) {
-            goalPickerSheet
-                .presentationDetents([.height(340)])
                 .presentationDragIndicator(.visible)
         }
         // MARK: - Checkmarks Management Sheet
@@ -426,121 +413,6 @@ public struct SleepView: View {
         guard !trimmed.isEmpty else { return }
         sleepModel.addCheckmark(title: trimmed)
         newCheckmarkText = ""
-    }
-    
-    // MARK: - Interactive Sleep Goal Sheet
-    private func openGoalEditor() {
-        temporaryGoalSelection = sleepModel.targetSleepHours
-        isEditingGoalPresented = true
-    }
-    
-    private var goalPickerSheet: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                // Large Goal Display
-                VStack(spacing: 6) {
-                    let hours = Int(temporaryGoalSelection)
-                    let minutes = Int(round((temporaryGoalSelection - Double(hours)) * 60))
-                    
-                    HStack(spacing: 8) {
-                        Image(systemName: "moon.stars.fill")
-                            .font(.system(size: 26))
-                            .foregroundColor(sleepModel.accentColor)
-                        
-                        Text(minutes == 0 ? "\(hours)h" : "\(hours)h \(minutes)m")
-                            .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(.primary)
-                    }
-                    
-                    Text("Target Sleep Goal Per Night")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 8)
-                
-                // Quick Goal Presets
-                HStack(spacing: 8) {
-                    goalPresetButton(hours: 7.0, label: "7h")
-                    goalPresetButton(hours: 7.5, label: "7h 30m")
-                    goalPresetButton(hours: 8.0, label: "8h")
-                    goalPresetButton(hours: 8.5, label: "8h 30m")
-                    goalPresetButton(hours: 9.0, label: "9h")
-                }
-                .padding(.horizontal, 8)
-                
-                // Fine-tuning Stepper / Slider
-                VStack(spacing: 8) {
-                    Slider(
-                        value: $temporaryGoalSelection,
-                        in: 5.0...12.0,
-                        step: 0.25
-                    )
-                    .tint(sleepModel.accentColor)
-                    
-                    HStack {
-                        Text("5h min")
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text("12h max")
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer()
-            }
-            .navigationTitle("Set Sleep Goal")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        isEditingGoalPresented = false
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        sleepModel.setTargetSleepHours(temporaryGoalSelection)
-                        isEditingGoalPresented = false
-                    }
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(sleepModel.accentColor)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func goalPresetButton(hours: Double, label: String) -> some View {
-        let isSelected = (abs(temporaryGoalSelection - hours) < 0.05)
-        
-        Button {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                temporaryGoalSelection = hours
-            }
-        } label: {
-            Text(label)
-                .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
-                .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? sleepModel.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
-                        .overlay(
-                            Capsule()
-                                .stroke(isSelected ? Color.clear : Color(uiColor: .separator).opacity(0.3), lineWidth: 0.8)
-                        )
-                )
-        }
-        .buttonStyle(.plain)
     }
     
     // MARK: - Interactive Time Picker Sheet

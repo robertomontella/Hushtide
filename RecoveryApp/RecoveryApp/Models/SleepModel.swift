@@ -68,10 +68,31 @@ public final class SleepModel {
     // Callback invoked whenever sleep duration, bedtime, goal, or checkmarks are modified
     public var onStateChanged: (() -> Void)? = nil
     
+    // MARK: - Shared Calendar Model Reference
+    public var calendarModel: CalendarModel? = nil
+    
     // MARK: - Theme & Header
     public var title: String = "Sleep"
-    public var currentDaySubtitle: String = "Today, Wednesday 28 October"
-    public var selectedDayIndex: Int = 2
+    public var currentDaySubtitle: String {
+        calendarModel?.currentDaySubtitle ?? "Today"
+    }
+    public var selectedDayIndex: Int = 0
+    
+    // MARK: - Future Day Check Helpers
+    public func isDayIndexInFuture(_ index: Int) -> Bool {
+        if let calendarModel {
+            return calendarModel.isDayIndexInFuture(index)
+        }
+        let calendar = Calendar.current
+        let now = Date()
+        let weekday = calendar.component(.weekday, from: now)
+        let todayIndex = (weekday + 5) % 7
+        return index > todayIndex
+    }
+    
+    public var isSelectedDayInFuture: Bool {
+        isDayIndexInFuture(selectedDayIndex)
+    }
     
     // Accent Color: royal indigo (#535DFF) matching design mockup
     public var accentColor: Color = Color(red: 0.33, green: 0.36, blue: 1.0)
@@ -103,7 +124,7 @@ public final class SleepModel {
     // MARK: - Weekly Sleep Tracking (Current Week: Mon - Sun)
     public var weeklySleepMinutes: [Int] = [465, 390, 465, 480, 435, 510, 480]
     
-    // 7-day individual records for full schedule and checkmark persistence
+    // 7-day individual records for full schedule and checkmark persistence (all checkboxes marked for each day)
     public var weeklyRecords: [DaySleepRecord] = [
         // 0: Monday (7h 45m = 465m)
         DaySleepRecord(inBedHour: 11, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 45, asleepPeriod: .am, checkmarks: [
@@ -112,10 +133,10 @@ public final class SleepModel {
         ]),
         // 1: Tuesday (6h 30m = 390m)
         DaySleepRecord(inBedHour: 11, inBedMinute: 30, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
         ]),
-        // 2: Wednesday (Today - 7h 45m = 465m)
+        // 2: Wednesday (7h 45m = 465m)
         DaySleepRecord(inBedHour: 11, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 45, asleepPeriod: .am, checkmarks: [
             SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
@@ -144,6 +165,11 @@ public final class SleepModel {
     
     public var currentWeeklySleepMinutes: [Int] {
         var list = weeklySleepMinutes
+        for i in 0..<list.count {
+            if isDayIndexInFuture(i) {
+                list[i] = 0
+            }
+        }
         if selectedDayIndex >= 0 && selectedDayIndex < list.count {
             list[selectedDayIndex] = durationMinutes
         }
@@ -151,9 +177,10 @@ public final class SleepModel {
     }
     
     public var weeklyAverageMinutes: Int {
-        let list = currentWeeklySleepMinutes
-        guard !list.isEmpty else { return durationMinutes }
-        return list.reduce(0, +) / list.count
+        let nonFuture = (0..<currentWeeklySleepMinutes.count).filter { !isDayIndexInFuture($0) }
+        guard !nonFuture.isEmpty else { return durationMinutes }
+        let sum = nonFuture.map { currentWeeklySleepMinutes[$0] }.reduce(0, +)
+        return sum / nonFuture.count
     }
     
     public var weeklyAverageFormatted: String {
@@ -164,7 +191,8 @@ public final class SleepModel {
     
     public var daysMeetingTargetCount: Int {
         let targetMins = Int(targetSleepHours * 60.0)
-        return currentWeeklySleepMinutes.filter { $0 >= targetMins }.count
+        let nonFuture = (0..<currentWeeklySleepMinutes.count).filter { !isDayIndexInFuture($0) }
+        return nonFuture.filter { currentWeeklySleepMinutes[$0] >= targetMins }.count
     }
     
     public var weeklySleepProgress: Double {
@@ -238,6 +266,7 @@ public final class SleepModel {
     
     // MARK: - Dynamic Sleep Duration Calculations
     public var durationMinutes: Int {
+        if isSelectedDayInFuture { return 0 }
         if let healthAsleepMinutes { return healthAsleepMinutes }
         let bedMins = toMinutesFromMidnight(hour: inBedHour, minute: inBedMinute, period: inBedPeriod)
         let wakeMins = toMinutesFromMidnight(hour: asleepHour, minute: asleepMinute, period: asleepPeriod)
@@ -269,8 +298,9 @@ public final class SleepModel {
     
     /// Visual fraction of the ring (0.0 ... 1.0) proportional to user target sleep
     public var ringProgress: Double {
+        guard durationMinutes > 0 else { return 0.0 }
         let targetMins = targetSleepHours * 60.0
-        guard targetMins > 0 else { return 0 }
+        guard targetMins > 0 else { return 0.0 }
         return min(1.0, max(0.01, Double(durationMinutes) / targetMins))
     }
     
@@ -373,7 +403,7 @@ public final class SleepModel {
         generator.notificationOccurred(.success)
         
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            checkmarks.append(SleepCheckmarkItem(title: trimmed, isChecked: false))
+            checkmarks.append(SleepCheckmarkItem(title: trimmed, isChecked: true))
             syncCurrentToRecord()
         }
         onStateChanged?()
@@ -446,6 +476,20 @@ public final class SleepModel {
     
     /// Constructs a valid SleepNight for the currently selected day to evaluate recovery dynamically.
     public func currentDaySleepNight() -> SleepNight {
+        let asleepMins = durationMinutes
+        let day = calendarModel?.selectedDate ?? Date()
+        if isSelectedDayInFuture || asleepMins <= 0 {
+            return SleepNight(
+                day: day,
+                bedtime: day,
+                wakeTime: day,
+                asleepMinutes: 0,
+                inBedMinutes: 0,
+                deepMinutes: 0,
+                remMinutes: 0
+            )
+        }
+        
         var calendar = Calendar.current
         calendar.firstWeekday = 2 // Monday
         let now = Date()
@@ -453,8 +497,8 @@ public final class SleepModel {
         let weekday = calendar.component(.weekday, from: now)
         let daysFromMonday = (weekday + 5) % 7
         let monday = calendar.date(byAdding: .day, value: -daysFromMonday, to: today) ?? today
-        let day = calendar.date(byAdding: .day, value: selectedDayIndex, to: monday) ?? today
-        let previousDay = calendar.date(byAdding: .day, value: -1, to: day) ?? day
+        let resolvedDay = calendar.date(byAdding: .day, value: selectedDayIndex, to: monday) ?? today
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: resolvedDay) ?? resolvedDay
         
         var bedHour24 = inBedHour
         if inBedPeriod == .pm && bedHour24 < 12 { bedHour24 += 12 }
@@ -465,15 +509,14 @@ public final class SleepModel {
         if asleepPeriod == .am && wakeHour24 == 12 { wakeHour24 = 0 }
         
         let bedtime = calendar.date(bySettingHour: bedHour24, minute: inBedMinute, second: 0, of: previousDay) ?? previousDay
-        let wakeTime = calendar.date(bySettingHour: wakeHour24, minute: asleepMinute, second: 0, of: day) ?? day
+        let wakeTime = calendar.date(bySettingHour: wakeHour24, minute: asleepMinute, second: 0, of: resolvedDay) ?? resolvedDay
         
-        let asleepMins = durationMinutes
         let inBedMins = Int((Double(asleepMins) / 0.90).rounded())
         let deepMins = Int((Double(asleepMins) * 0.18).rounded())
         let remMins = Int((Double(asleepMins) * 0.20).rounded())
         
         return SleepNight(
-            day: day,
+            day: resolvedDay,
             bedtime: bedtime,
             wakeTime: wakeTime,
             asleepMinutes: asleepMins,

@@ -25,7 +25,8 @@ public final class TrainingModel {
     public var intensitySectionLabel: String = "INTENSITY"
     public var readinessLabel: String = "READINESS"
     
-    // MARK: - Shared Sleep Model State
+    // MARK: - Shared Calendar & Sleep Model State
+    public var calendarModel = CalendarModel()
     public var sleepModel = SleepModel()
     
     // MARK: - Summary Screen Metrics (Dynamic & Synchronized)
@@ -33,11 +34,27 @@ public final class TrainingModel {
     
     // Quality target and daily scores
     public var qualityTargetPercentage: Int = 85
-    public var weeklyQualityPercentages: [Int] = [86, 72, 92, 80, 90, 96, 88]
+    public var weeklyQualityPercentages: [Int] {
+        get {
+            var list = _weeklyQualityPercentages
+            for i in 0..<list.count {
+                if calendarModel.isDayIndexInFuture(i) {
+                    list[i] = 0
+                }
+            }
+            return list
+        }
+        set {
+            _weeklyQualityPercentages = newValue
+        }
+    }
+    private var _weeklyQualityPercentages: [Int] = [86, 72, 92, 80, 90, 96, 88]
     
     public var weeklyQualityAverage: Int {
-        guard !weeklyQualityPercentages.isEmpty else { return 85 }
-        return weeklyQualityPercentages.reduce(0, +) / weeklyQualityPercentages.count
+        let nonFuture = (0..<weeklyQualityPercentages.count).filter { !calendarModel.isDayIndexInFuture($0) }
+        guard !nonFuture.isEmpty else { return 85 }
+        let sum = nonFuture.map { weeklyQualityPercentages[$0] }.reduce(0, +)
+        return sum / nonFuture.count
     }
     
     public var summaryQualityValue: String {
@@ -69,8 +86,13 @@ public final class TrainingModel {
         sleepModel.weeklySleepProgress
     }
     
-    // Training target and calculations based on weekly logged workouts
-    public var trainingWeeklyMinutesTarget: Int = 150
+    // Training target and calculations based on daily target and weekly logged workouts
+    public var trainingDailyMinutesTarget: Int = 30 {
+        didSet {
+            trainingWeeklyMinutesTarget = trainingDailyMinutesTarget * 7
+        }
+    }
+    public var trainingWeeklyMinutesTarget: Int = 210
     
     public var weeklyLoggedTrainingMinutes: Int {
         loggedWorkouts.reduce(0) { $0 + $1.durationMinutes }
@@ -115,13 +137,20 @@ public final class TrainingModel {
         }
     }
     
-    public func setTrainingWeeklyTarget(_ minutes: Int) {
+    public func setTrainingDailyTarget(_ dailyMinutes: Int) {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.prepare()
         generator.impactOccurred()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            trainingWeeklyMinutesTarget = max(15, min(999, minutes))
+            let clamped = max(5, min(180, dailyMinutes))
+            trainingDailyMinutesTarget = clamped
+            trainingWeeklyMinutesTarget = clamped * 7
         }
+    }
+    
+    public func setTrainingWeeklyTarget(_ minutes: Int) {
+        let daily = max(1, minutes / 7)
+        setTrainingDailyTarget(daily)
     }
     
     public func selectSummaryMetric(_ metric: SummaryMetricTab) {
@@ -134,23 +163,21 @@ public final class TrainingModel {
     }
     
     // MARK: - Weekdays Selector
-    public var days: [DayItem] = [
-        DayItem(id: 0, letter: "M", dayNumber: 26, fullDateDescription: "Monday, 26 October"),
-        DayItem(id: 1, letter: "T", dayNumber: 27, fullDateDescription: "Tuesday, 27 October"),
-        DayItem(id: 2, letter: "W", dayNumber: 28, fullDateDescription: "Today, Wednesday 28 October", isSelectedDefault: true),
-        DayItem(id: 3, letter: "T", dayNumber: 29, fullDateDescription: "Thursday, 29 October"),
-        DayItem(id: 4, letter: "F", dayNumber: 30, fullDateDescription: "Friday, 30 October"),
-        DayItem(id: 5, letter: "S", dayNumber: 31, fullDateDescription: "Saturday, 31 October"),
-        DayItem(id: 6, letter: "S", dayNumber: 1,  fullDateDescription: "Sunday, 1 November")
-    ]
+    public var days: [DayItem] {
+        calendarModel.weekDays
+    }
     
-    public var selectedDayIndex: Int = 2
+    public var selectedDayIndex: Int {
+        get { calendarModel.selectedDayIndex }
+        set { calendarModel.selectedDayIndex = newValue }
+    }
     
     public var currentDaySubtitle: String {
-        guard selectedDayIndex >= 0 && selectedDayIndex < days.count else {
-            return "Today, Wednesday 28 October"
-        }
-        return days[selectedDayIndex].fullDateDescription
+        calendarModel.currentDaySubtitle
+    }
+    
+    public var isSelectedDayInFuture: Bool {
+        calendarModel.isSelectedDateInFuture
     }
     
     // MARK: - Training Screen Metrics (Centralized & Customizable)
@@ -268,6 +295,7 @@ public final class TrainingModel {
     
     public init() {
         self.loggedWorkouts = []
+        self.sleepModel.calendarModel = self.calendarModel
         self.sleepModel.onStateChanged = { [weak self] in
             self?.evaluateRecovery()
         }
@@ -299,6 +327,9 @@ public final class TrainingModel {
     
     // MARK: - Dynamic Recovery Status & Recommendation
     public var recoveryStatusTitle: String {
+        if isSelectedDayInFuture {
+            return "No data"
+        }
         switch readinessScore {
         case ..<40.0:
             return "Needs rest"
@@ -325,6 +356,9 @@ public final class TrainingModel {
     }
     
     public var recoveryStatusDescription: String {
+        if isSelectedDayInFuture {
+            return "No recovery data recorded for future days."
+        }
         if let custom = customRecoveryRecommendation {
             return custom
         }
@@ -342,6 +376,9 @@ public final class TrainingModel {
     
     // MARK: - Automatic Recommended Intensity Level
     public var recommendedIntensityLevel: IntensityLevel {
+        if isSelectedDayInFuture {
+            return .rest
+        }
         switch readinessScore {
         case ..<40.0:
             return .rest
@@ -359,13 +396,7 @@ public final class TrainingModel {
     }
     
     public func dateForDay(at index: Int) -> Date {
-        let calendar = Calendar.current
-        let now = Date()
-        let weekday = calendar.component(.weekday, from: now)
-        let daysFromMonday = (weekday + 5) % 7
-        let monday = calendar.date(byAdding: .day, value: -daysFromMonday, to: now) ?? now
-        let day = calendar.date(byAdding: .day, value: index, to: monday) ?? monday
-        return calendar.date(bySettingHour: 17, minute: 0, second: 0, of: day) ?? day
+        calendarModel.dateForDay(at: index)
     }
     
     // MARK: - User Intent Actions
@@ -464,7 +495,7 @@ public final class TrainingModel {
         generator.impactOccurred()
         
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            selectedDayIndex = index
+            calendarModel.selectDay(at: index)
             sleepModel.selectDay(at: index)
             evaluateRecovery()
         }
@@ -491,6 +522,21 @@ public final class TrainingModel {
     // MARK: - Recovery & Readiness Algorithm Evaluation
     /// Evaluates recovery based on HealthKit data or current sleep duration, checkmarks, and workout logs.
     public func evaluateRecovery() {
+        if isSelectedDayInFuture {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                self.readinessScore = 0.0
+                self.qualityScore = 0
+                self._customQualityValue = nil
+                self.sleepDebtValue = "0m"
+                self.regularityMetric = SecondaryMetric(title: "Regularity", value: "No data")
+                self.customRecoveryRecommendation = "No recovery data recorded for future days."
+                if selectedDayIndex >= 0 && selectedDayIndex < _weeklyQualityPercentages.count {
+                    self._weeklyQualityPercentages[selectedDayIndex] = 0
+                }
+            }
+            return
+        }
+        
         let workoutsAsHealth = loggedWorkouts.map { $0.toHealthWorkout() }
         let currentNight = sleepModel.currentDaySleepNight()
         let recentNights = sleepModel.toSleepNights()
@@ -519,8 +565,8 @@ public final class TrainingModel {
             self.customRecoveryRecommendation = result.recoveryRecommendation
             
             // Keep weekly quality bars synchronized for the summary screen
-            if selectedDayIndex >= 0 && selectedDayIndex < weeklyQualityPercentages.count {
-                self.weeklyQualityPercentages[selectedDayIndex] = result.qualityScore
+            if selectedDayIndex >= 0 && selectedDayIndex < _weeklyQualityPercentages.count {
+                self._weeklyQualityPercentages[selectedDayIndex] = result.qualityScore
             }
         }
     }

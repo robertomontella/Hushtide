@@ -1,3 +1,10 @@
+//
+//  Calendar.swift
+//  RecoveryApp
+//
+//  Created by AFP FED on 28/10/2026.
+//
+
 import SwiftUI
 import Observation
 
@@ -15,7 +22,7 @@ public final class CalendarModel {
     
     // MARK: - Weekdays State
     public var weekDays: [DayItem] = []
-    public var selectedDayIndex: Int = 2
+    public var selectedDayIndex: Int = 0
     
     // MARK: - Subtitles & Labels
     public var currentDaySubtitle: String {
@@ -31,10 +38,34 @@ public final class CalendarModel {
         return formatter.string(from: selectedDate).capitalized
     }
     
-    // MARK: - Initializer
-    public init(initialDate: Date = CalendarModel.defaultOctoberDate) {
+    // MARK: - Initializer (defaults to current date across the app)
+    public init(initialDate: Date = Date()) {
         self.selectedDate = initialDate
         recalculateWeek(around: initialDate)
+    }
+    
+    // MARK: - Future Date Helpers
+    public var isSelectedDateInFuture: Bool {
+        isDateInFuture(selectedDate)
+    }
+    
+    public func isDateInFuture(_ date: Date) -> Bool {
+        let calendar = Calendar.current
+        return calendar.startOfDay(for: date) > calendar.startOfDay(for: Date())
+    }
+    
+    public func isDayIndexInFuture(_ index: Int) -> Bool {
+        let dayDate = dateForDay(at: index)
+        return isDateInFuture(dayDate)
+    }
+    
+    public func dateForDay(at index: Int) -> Date {
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: selectedDate)
+        let daysFromMonday = (weekday + 5) % 7
+        let startOfDay = calendar.startOfDay(for: selectedDate)
+        let monday = calendar.date(byAdding: .day, value: -daysFromMonday, to: startOfDay) ?? startOfDay
+        return calendar.date(byAdding: .day, value: index, to: monday) ?? selectedDate
     }
     
     // MARK: - User Intent Actions
@@ -46,13 +77,8 @@ public final class CalendarModel {
         
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             selectedDayIndex = index
-            // Calculate corresponding date from Monday start of week
-            var calendar = Calendar.current
-            calendar.firstWeekday = 2 // Monday
-            let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: selectedDate)) ?? selectedDate
-            if let newDate = calendar.date(byAdding: .day, value: index, to: startOfWeek) {
-                self.selectedDate = newDate
-            }
+            let newDate = dateForDay(at: index)
+            self.selectedDate = newDate
         }
     }
     
@@ -71,31 +97,30 @@ public final class CalendarModel {
     }
     
     public func moveToPreviousWeek() {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
+        let calendar = Calendar.current
         if let prevWeek = calendar.date(byAdding: .day, value: -7, to: selectedDate) {
             selectDate(prevWeek)
         }
     }
     
     public func moveToNextWeek() {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
+        let calendar = Calendar.current
         if let nextWeek = calendar.date(byAdding: .day, value: 7, to: selectedDate) {
             selectDate(nextWeek)
         }
     }
     
-    // MARK: - Dynamic Week Calculation
+    // MARK: - Dynamic Week Calculation (Monday to Sunday)
     public func recalculateWeek(around baseDate: Date) {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday is 1st weekday
-        
-        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: baseDate)) ?? baseDate
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: baseDate)
+        let daysFromMonday = (weekday + 5) % 7
+        let startOfDay = calendar.startOfDay(for: baseDate)
+        let startOfWeek = calendar.date(byAdding: .day, value: -daysFromMonday, to: startOfDay) ?? startOfDay
         
         let dayLetters = ["M", "T", "W", "T", "F", "S", "S"]
         var items: [DayItem] = []
-        var matchIndex = 2
+        var matchIndex = 0
         
         for i in 0..<7 {
             guard let dayDate = calendar.date(byAdding: .day, value: i, to: startOfWeek) else { continue }
@@ -136,16 +161,5 @@ public final class CalendarModel {
         } else {
             return formatted
         }
-    }
-    
-    // Fallback date matching the original mockups (Wednesday, October 28, 2026)
-    public static var defaultOctoberDate: Date {
-        var components = DateComponents()
-        components.year = 2026
-        components.month = 10
-        components.day = 28
-        components.hour = 9
-        components.minute = 41
-        return Calendar.current.date(from: components) ?? Date()
     }
 }

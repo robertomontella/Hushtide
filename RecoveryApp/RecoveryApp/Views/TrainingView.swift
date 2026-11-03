@@ -10,7 +10,7 @@ import SwiftUI
 public struct TrainingView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable public var viewModel: TrainingModel
-    @State private var isDebugSheetPresented: Bool = false
+    @State private var isCalendarOpen: Bool = false
     @State private var isAddWorkoutPresented: Bool = false
     @State private var expandedWorkoutId: UUID? = nil
     @State private var editingWorkout: LoggedWorkout? = nil
@@ -22,39 +22,95 @@ public struct TrainingView: View {
     }
     
     public var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 16) {
-                // MARK: - Header with Date & Weekday Selector
-                headerSection
-                
-                // MARK: - Screen Content (Compact, Elegant & Feature-Complete)
+        ZStack(alignment: .top) {
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
-                    // 1. Main Readiness Card (Compact)
-                    mainReadinessCard
+                    // MARK: - Header with Date & Weekday Selector & Calendar Button
+                    StandardHeaderView(
+                        title: viewModel.trainingTitle,
+                        dateSubtitle: viewModel.currentDaySubtitle,
+                        days: viewModel.days,
+                        selectedDayIndex: viewModel.selectedDayIndex,
+                        showProfileButton: true, // Enables top-right corner action button
+                        profileIconName: "calendar", // Renders calendar icon for date picker
+                        onSelectDay: { index in
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                expandedWorkoutId = nil
+                            }
+                            viewModel.selectDay(at: index)
+                        },
+                        onProfileTap: {
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.prepare()
+                            generator.impactOccurred()
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                isCalendarOpen.toggle()
+                            }
+                        }
+                    )
+                    .simultaneousGesture(
+                        // Swipe gesture from top to bottom on header to reveal calendar
+                        DragGesture(minimumDistance: 20)
+                            .onEnded { value in
+                                if value.translation.height > 40 && abs(value.translation.width) < 50 && !isCalendarOpen {
+                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                    generator.prepare()
+                                    generator.impactOccurred()
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                        isCalendarOpen = true
+                                    }
+                                }
+                            }
+                    )
                     
-                    // 2. Recommended Intensity (Badge as Title + Auto-selected Buttons)
-                    recommendedIntensitySection
+                    // MARK: - Screen Content (Compact, Elegant & Feature-Complete)
+                    VStack(spacing: 16) {
+                        // 1. Main Readiness Card (Compact)
+                        mainReadinessCard
+                        
+                        // 2. Recommended Intensity (Badge as Title + Auto-selected Buttons)
+                        recommendedIntensitySection
+                        
+                        // 3. Add Your Workout Feature
+                        addWorkoutSection
+                    }
+                    .padding(.horizontal, 20)
                     
-                    // 3. Add Your Workout Feature
-                    addWorkoutSection
+                    // Bottom breathing room above TabBar
+                    Spacer()
+                        .frame(height: 120)
                 }
-                .padding(.horizontal, 20)
-                
-                // Bottom breathing room above TabBar
-                Spacer()
-                    .frame(height: 120)
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
+            .scrollBounceBehavior(.always, axes: .vertical)
+            
+            // MARK: - Top-Down Drop-Down Calendar (Slides from Top to Bottom)
+            if isCalendarOpen {
+                // Dimmed Backdrop Overlay
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                            isCalendarOpen = false
+                        }
+                    }
+                    .transition(.opacity)
+                
+                // Calendar Panel Dropdown
+                calendarDropDownView
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        )
+                    )
+                    .zIndex(100)
+            }
         }
-        .scrollBounceBehavior(.always, axes: .vertical)
-        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .onAppear {
             viewModel.evaluateRecovery()
-        }
-        .sheet(isPresented: $isDebugSheetPresented) {
-            debugSliderSheet
-                .presentationDetents([.height(230)])
-                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isAddWorkoutPresented) {
             AddWorkoutView(viewModel: viewModel)
@@ -81,102 +137,111 @@ public struct TrainingView: View {
         }
     }
     
-    // MARK: - Header Section
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Title & Date Subtitle + Discreet Debug Lab Pill
+    // MARK: - Calendar Drop-Down Panel View (Slides Down from Top)
+    private var calendarDropDownView: some View {
+        VStack(spacing: 12) {
+            // Header Bar inside Dropdown
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.trainingTitle)
-                        .font(.system(size: 34, weight: .bold))
+                    Text("Select Date")
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.primary)
                     
-                    Text(viewModel.currentDaySubtitle)
-                        .font(.system(size: 15, weight: .regular))
+                    Text(viewModel.calendarModel.formattedHeaderTitle)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                // Discreet Slider Debug Button (Liquid Glass Capsule)
+                // Jump to Today Pill Button
                 Button {
                     let generator = UIImpactFeedbackGenerator(style: .light)
                     generator.prepare()
                     generator.impactOccurred()
-                    isDebugSheetPresented = true
+                    viewModel.calendarModel.goToToday()
+                    viewModel.selectDay(at: viewModel.calendarModel.selectedDayIndex)
                 } label: {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(viewModel.dynamicThemeColor)
-                            .frame(width: 7, height: 7)
-                        
-                        Image(systemName: "slider.horizontal.3")
+                    HStack(spacing: 5) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Today")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.primary)
                     }
-                    .padding(.horizontal, 11)
+                    .foregroundColor(viewModel.dynamicThemeColor)
+                    .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(
                         Capsule()
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.65), lineWidth: 1)
-                            )
+                            .fill(viewModel.dynamicThemeColor.opacity(0.12))
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Open Readiness Debug Slider")
-            }
-            .padding(.horizontal, 20)
-            
-            // Day Selector Pill Container (M  T  W  T  F  S  S)
-            HStack(spacing: 0) {
-                ForEach(Array(viewModel.days.enumerated()), id: \.element.id) { index, day in
-                    let isSelected = (index == viewModel.selectedDayIndex)
-                    
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            expandedWorkoutId = nil
-                        }
-                        viewModel.selectDay(at: index)
-                    } label: {
-                        Text(day.letter)
-                            .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
-                            .foregroundColor(
-                                isSelected
-                                    ? (colorScheme == .dark ? Color.black : Color.white)
-                                    : (colorScheme == .dark ? Color.white.opacity(0.65) : Color(uiColor: .secondaryLabel))
-                            )
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 38)
-                            .background {
-                                if isSelected {
-                                    Circle()
-                                        .fill(colorScheme == .dark ? Color.white : Color.black)
-                                        .frame(width: 32, height: 32)
-                                }
-                            }
+                
+                // Close Circle Button
+                Button {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.prepare()
+                    generator.impactOccurred()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        isCalendarOpen = false
                     }
-                    .buttonStyle(.plain)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(Color(uiColor: .tertiaryLabel))
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color(uiColor: .separator).opacity(0.3), lineWidth: 0.8)
-                    )
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
-            )
             .padding(.horizontal, 20)
+            .padding(.top, 14)
+            
+            // Graphical Calendar DatePicker
+            DatePicker(
+                "Select Date",
+                selection: Binding(
+                    get: { viewModel.calendarModel.selectedDate },
+                    set: { newDate in
+                        viewModel.calendarModel.selectDate(newDate)
+                        viewModel.selectDay(at: viewModel.calendarModel.selectedDayIndex)
+                    }
+                ),
+                displayedComponents: [.date]
+            )
+            .datePickerStyle(.graphical)
+            .tint(viewModel.dynamicThemeColor)
+            .padding(.horizontal, 14)
+            
+            // Bottom Swipe Drag Handle Bar (Swipe down or up to dismiss)
+            VStack(spacing: 4) {
+                Capsule()
+                    .fill(Color(uiColor: .systemGray3))
+                    .frame(width: 40, height: 5)
+                    .padding(.vertical, 8)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        if value.translation.height < -15 || value.translation.height > 35 {
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.prepare()
+                            generator.impactOccurred()
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                                isCalendarOpen = false
+                            }
+                        }
+                    }
+            )
         }
-        .padding(.top, 4)
-        .padding(.bottom, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .shadow(color: Color.black.opacity(0.14), radius: 20, x: 0, y: 10)
+        )
+        .padding(.horizontal, 12)
+        .padding(.top, 6)
     }
     
     // MARK: - Main Readiness Card (Compact & Reduced)
@@ -505,80 +570,6 @@ public struct TrainingView: View {
                 }
             }
         }
-    }
-    
-    // MARK: - Interactive Debug Sheet (0–100% Slider & Presets)
-    private var debugSliderSheet: some View {
-        NavigationStack {
-            VStack(spacing: 18) {
-                HStack {
-                    Circle()
-                        .fill(viewModel.dynamicThemeColor)
-                        .frame(width: 10, height: 10)
-                    
-                    Text("\(Int(viewModel.readinessScore))% Readiness • \(viewModel.dynamicColorName)")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(viewModel.dynamicThemeColor)
-                    
-                    Spacer()
-                    
-                    Button("Done") {
-                        isDebugSheetPresented = false
-                    }
-                    .font(.system(size: 15, weight: .semibold))
-                }
-                .padding(.top, 6)
-                
-                // Continuous Slider (0 – 100)
-                Slider(
-                    value: Binding(
-                        get: { viewModel.readinessScore },
-                        set: { newValue in
-                            viewModel.setReadinessScore(newValue)
-                        }
-                    ),
-                    in: 0...100,
-                    step: 1
-                )
-                .tint(viewModel.dynamicThemeColor)
-                
-                // Quick Color Scenarios
-                HStack(spacing: 8) {
-                    presetButton(label: "Red (25%)", score: 25, color: Color(red: 0.95, green: 0.26, blue: 0.21))
-                    presetButton(label: "Orange (50%)", score: 50, color: Color(red: 1.0, green: 0.58, blue: 0.0))
-                    presetButton(label: "Yellow (75%)", score: 75, color: Color(red: 0.96, green: 0.72, blue: 0.0))
-                    presetButton(label: "Green (90%)", score: 90, color: Color(red: 0.20, green: 0.78, blue: 0.35))
-                }
-                
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .navigationTitle("Readiness Test Lab")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-    
-    @ViewBuilder
-    private func presetButton(label: String, score: Double, color: Color) -> some View {
-        Button {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
-            viewModel.setReadinessScore(score)
-        } label: {
-            Text(label)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 7)
-                .frame(maxWidth: .infinity)
-                .background(
-                    Capsule()
-                        .fill(color.opacity(0.12))
-                )
-        }
-        .buttonStyle(.plain)
     }
     
     @ViewBuilder

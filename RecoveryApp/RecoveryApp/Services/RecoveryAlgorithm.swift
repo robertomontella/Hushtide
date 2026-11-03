@@ -228,6 +228,7 @@ public enum RecoveryAlgorithm {
     
     /// Evaluates restfulness through duration sufficiency, sleep efficiency,
     /// sleep hygiene checkmarks compliance, and physiological rest indicators.
+    /// Formula rewritten to be highly responsive to sleep duration and checkmarks status.
     public static func calculateRestQuality(
         currentNight: SleepNight?,
         targetSleepHours: Double = 8.0,
@@ -235,56 +236,58 @@ public enum RecoveryAlgorithm {
         restingHeartRate: Double? = nil,
         restingHeartRateBaseline: Double? = nil
     ) -> (qualityScore: Int, restLevelScore: Double, checkmarksScore: Double, checkmarksMet: Bool) {
-        let targetMinutes = max(1.0, targetSleepHours * 60.0)
-        let actualAsleep = Double(currentNight?.asleepMinutes ?? 465)
-        let actualInBed = Double(max(currentNight?.inBedMinutes ?? 510, Int(actualAsleep)))
+        guard let currentNight = currentNight, currentNight.asleepMinutes > 0 else {
+            return (0, 0.0, 0.0, false)
+        }
         
-        // Component A: Sleep Sufficiency (ratio of actual sleep duration to target)
-        // 8h/8h = 100%, 7h/8h = 87.5%, 6h/8h = 75%, 5h/8h = 62.5%, 4h/8h = 50%
-        let durationRatio = min(1.0, actualAsleep / targetMinutes)
-        let durationScore = max(15.0, min(100.0, durationRatio * 100.0))
+        let targetMinutes = max(60.0, targetSleepHours * 60.0)
+        let actualAsleep = Double(currentNight.asleepMinutes)
+        let actualInBed = Double(max(currentNight.inBedMinutes, Int(actualAsleep)))
         
-        // Component B: Sleep Efficiency (asleep time / time in bed)
-        // Standard healthy efficiency is 85% - 95%.
-        let rawEff = (actualAsleep / max(1.0, actualInBed)) * 100.0
-        let efficiencyScore = max(35.0, min(100.0, rawEff))
+        // Component A: Sleep Duration Sufficiency (responsive power curve)
+        // 100% on target -> 100.0, 7h/8h -> 81.8, 6h/8h -> 64.9, 5h/8h -> 49.4, 4h/8h -> 35.3
+        let durationRatio = actualAsleep / targetMinutes
+        let durationScore: Double
+        if durationRatio >= 1.0 {
+            durationScore = 100.0
+        } else {
+            durationScore = max(0.0, pow(durationRatio, 1.5) * 100.0)
+        }
         
-        // Component C: Sleep Hygiene Checkmarks Compliance
-        // When checkmarks are completed, sleep habits promote restorative sleep.
+        // Component B: Sleep Hygiene Checkmarks Compliance (strong direct impact)
+        // Full completion gives 100%, each unchecked checkmark significantly lowers the score
         let checkmarksScore: Double
         let checkmarksMet: Bool
         if !checkmarks.isEmpty {
             let checkedCount = checkmarks.filter { $0.isChecked }.count
             let ratio = Double(checkedCount) / Double(checkmarks.count)
             checkmarksMet = (ratio >= 0.99)
-            // 100% checked -> 100
-            // 50% checked  -> 70
-            // 0% checked   -> 40
-            checkmarksScore = 40.0 + (ratio * 60.0)
+            checkmarksScore = ratio * 100.0
         } else {
-            checkmarksScore = 90.0
+            checkmarksScore = 100.0
             checkmarksMet = true
         }
         
-        // Component D: Physiological Rest (RHR recovery or sleep stages)
+        // Component C: Sleep Efficiency (asleep time / time in bed)
+        let rawEff = (actualAsleep / max(1.0, actualInBed)) * 100.0
+        let efficiencyScore = max(0.0, min(100.0, (rawEff / 90.0) * 100.0))
+        
+        // Component D: Physiological Rest (RHR recovery or baseline fallback)
         let physioScore: Double
         if let rhr = restingHeartRate, let baseline = restingHeartRateBaseline, rhr > 0, baseline > 0 {
             let ratio = baseline / rhr
             physioScore = max(30.0, min(100.0, 75.0 + (ratio - 1.0) * 200.0))
-        } else if let current = currentNight, current.asleepMinutes > 0, (current.deepMinutes > 0 || current.remMinutes > 0) {
-            let restorativeRatio = Double(current.deepMinutes + current.remMinutes) / Double(current.asleepMinutes)
-            physioScore = max(40.0, min(100.0, (restorativeRatio / 0.40) * 100.0))
         } else {
-            physioScore = 88.0
+            physioScore = 90.0
         }
         
-        // Weighted Synthesis:
-        // Duration Sufficiency: 40%
-        // Sleep Efficiency: 25%
-        // Checkmarks Compliance: 25%
-        // Physiological Rest: 10%
-        let weighted = (durationScore * 0.40) + (efficiencyScore * 0.25) + (checkmarksScore * 0.25) + (physioScore * 0.10)
-        let finalQuality = max(15, min(100, Int(round(weighted))))
+        // Rewritten Weighted Synthesis:
+        // Duration Sufficiency: 60%
+        // Checkmarks Compliance: 30%
+        // Sleep Efficiency & Rest Factor: 10%
+        let restFactor = (efficiencyScore * 0.5) + (physioScore * 0.5)
+        let weighted = (durationScore * 0.60) + (checkmarksScore * 0.30) + (restFactor * 0.10)
+        let finalQuality = max(0, min(100, Int(round(weighted))))
         
         return (finalQuality, Double(finalQuality), checkmarksScore, checkmarksMet)
     }

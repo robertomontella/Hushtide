@@ -15,7 +15,6 @@ public struct SleepCardView: View {
     public let trackColor: Color
     public let inBedTime: String
     public let asleepTime: String
-    public var onEditGoal: (() -> Void)? = nil
     public var onEditInBedTime: (() -> Void)? = nil
     public var onEditAsleepTime: (() -> Void)? = nil
     
@@ -27,7 +26,6 @@ public struct SleepCardView: View {
         trackColor: Color = Color(red: 0.83, green: 0.83, blue: 0.95),
         inBedTime: String,
         asleepTime: String,
-        onEditGoal: (() -> Void)? = nil,
         onEditInBedTime: (() -> Void)? = nil,
         onEditAsleepTime: (() -> Void)? = nil
     ) {
@@ -38,21 +36,19 @@ public struct SleepCardView: View {
         self.trackColor = trackColor
         self.inBedTime = inBedTime
         self.asleepTime = asleepTime
-        self.onEditGoal = onEditGoal
         self.onEditInBedTime = onEditInBedTime
         self.onEditAsleepTime = onEditAsleepTime
     }
     
     public var body: some View {
         VStack(spacing: 12) {
-            // Circular Progress Gauge (Tappable target to set sleep goal)
+            // Circular Progress Gauge
             SleepGaugeView(
                 progress: progress,
                 durationText: durationText,
                 targetText: targetText,
                 accentColor: accentColor,
-                trackColor: trackColor,
-                onEditGoal: onEditGoal
+                trackColor: trackColor
             )
             .padding(.top, 0)
             
@@ -98,8 +94,7 @@ public struct SleepCardView: View {
         durationText: "7h 45m",
         targetText: "of 8h",
         inBedTime: "11:00 PM",
-        asleepTime: "6:45 AM",
-        onEditGoal: {}
+        asleepTime: "6:45 AM"
     )
     .padding()
     .background(Color(uiColor: .systemGroupedBackground))

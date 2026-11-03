@@ -23,7 +23,7 @@ public struct SummaryView: View {
     @State private var editingTargetMetric: SummaryMetricTab? = nil
     @State private var temporaryQualityTarget: Double = 85.0
     @State private var temporarySleepGoal: Double = 8.0
-    @State private var temporaryTrainingTarget: Double = 150.0
+    @State private var temporaryTrainingDailyTarget: Double = 30.0
     
     // Metric Accent Colors matching the rings and design specifications
     private let qualityColor = Color(red: 3/255.0, green: 199/255.0, blue: 190/255.0)  // Mint / Teal
@@ -69,10 +69,7 @@ public struct SummaryView: View {
                     
                     // Dynamic Detail Chart (Quality %, Sleep Target, Training Minutes)
                     SummaryDetailChartView(
-                        viewModel: viewModel,
-                        onEditTarget: {
-                            openTargetEditor(for: viewModel.selectedSummaryMetric)
-                        }
+                        viewModel: viewModel
                     )
                     
                     // Bottom spacing to ensure clean clearance above the tab bar
@@ -105,7 +102,7 @@ public struct SummaryView: View {
     
     // MARK: - Metric Cards Row (Interactive Buttons)
     /// Displays Quality, Sleep, and Training metric cards side-by-side with equal width.
-    /// Tapping any card switches the detailed chart below; tapping again opens target editor.
+    /// Single click switches the detailed chart below; changes must only be made by double-clicking on the cards.
     private var metricCardsRow: some View {
         HStack(spacing: 12) {
             // Quality Card (Mint / Teal)
@@ -115,12 +112,12 @@ public struct SummaryView: View {
                 value: viewModel.summaryQualityValue,
                 subtitle: viewModel.summaryQualitySubtitle,
                 isSelected: viewModel.selectedSummaryMetric == .quality,
-                action: {
-                    if viewModel.selectedSummaryMetric == .quality {
-                        openTargetEditor(for: .quality)
-                    } else {
-                        viewModel.selectSummaryMetric(.quality)
-                    }
+                onTap: {
+                    viewModel.selectSummaryMetric(.quality)
+                },
+                onDoubleTap: {
+                    viewModel.selectSummaryMetric(.quality)
+                    openTargetEditor(for: .quality)
                 }
             )
             
@@ -131,12 +128,12 @@ public struct SummaryView: View {
                 value: viewModel.summarySleepValue,
                 subtitle: viewModel.summarySleepSubtitle,
                 isSelected: viewModel.selectedSummaryMetric == .sleep,
-                action: {
-                    if viewModel.selectedSummaryMetric == .sleep {
-                        openTargetEditor(for: .sleep)
-                    } else {
-                        viewModel.selectSummaryMetric(.sleep)
-                    }
+                onTap: {
+                    viewModel.selectSummaryMetric(.sleep)
+                },
+                onDoubleTap: {
+                    viewModel.selectSummaryMetric(.sleep)
+                    openTargetEditor(for: .sleep)
                 }
             )
             
@@ -147,12 +144,12 @@ public struct SummaryView: View {
                 value: viewModel.summaryTrainingValue,
                 subtitle: viewModel.summaryTrainingSubtitle,
                 isSelected: viewModel.selectedSummaryMetric == .training,
-                action: {
-                    if viewModel.selectedSummaryMetric == .training {
-                        openTargetEditor(for: .training)
-                    } else {
-                        viewModel.selectSummaryMetric(.training)
-                    }
+                onTap: {
+                    viewModel.selectSummaryMetric(.training)
+                },
+                onDoubleTap: {
+                    viewModel.selectSummaryMetric(.training)
+                    openTargetEditor(for: .training)
                 }
             )
         }
@@ -166,7 +163,7 @@ public struct SummaryView: View {
         case .sleep:
             temporarySleepGoal = viewModel.sleepModel.targetSleepHours
         case .training:
-            temporaryTrainingTarget = Double(viewModel.trainingWeeklyMinutesTarget)
+            temporaryTrainingDailyTarget = Double(viewModel.trainingDailyMinutesTarget)
         }
         editingTargetMetric = metric
     }
@@ -389,12 +386,12 @@ public struct SummaryView: View {
                             .font(.system(size: 26))
                             .foregroundColor(trainingColor)
                         
-                        Text("\(Int(temporaryTrainingTarget))m")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                        Text("\(Int(temporaryTrainingDailyTarget))m / day")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                     }
                     
-                    Text("Weekly Training Target (~\(Int(temporaryTrainingTarget) / 7)m / day)")
+                    Text("Daily Target · Calculated Weekly: \(Int(temporaryTrainingDailyTarget) * 7)m")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -402,32 +399,32 @@ public struct SummaryView: View {
                 
                 // Presets
                 HStack(spacing: 8) {
+                    trainingPresetButton(minutes: 15)
+                    trainingPresetButton(minutes: 20)
+                    trainingPresetButton(minutes: 30)
+                    trainingPresetButton(minutes: 45)
+                    trainingPresetButton(minutes: 60)
                     trainingPresetButton(minutes: 90)
-                    trainingPresetButton(minutes: 120)
-                    trainingPresetButton(minutes: 150)
-                    trainingPresetButton(minutes: 180)
-                    trainingPresetButton(minutes: 210)
-                    trainingPresetButton(minutes: 240)
                 }
                 .padding(.horizontal, 8)
                 
                 // Slider
                 VStack(spacing: 8) {
                     Slider(
-                        value: $temporaryTrainingTarget,
-                        in: 30.0...600.0,
-                        step: 15.0
+                        value: $temporaryTrainingDailyTarget,
+                        in: 5.0...120.0,
+                        step: 5.0
                     )
                     .tint(trainingColor)
                     
                     HStack {
-                        Text("30m min")
+                        Text("5m / day min")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                         
                         Spacer()
                         
-                        Text("600m max")
+                        Text("120m / day max")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -436,7 +433,7 @@ public struct SummaryView: View {
                 
                 Spacer()
             }
-            .navigationTitle("Set Training Target")
+            .navigationTitle("Set Daily Training Target")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -447,7 +444,7 @@ public struct SummaryView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        viewModel.setTrainingWeeklyTarget(Int(temporaryTrainingTarget))
+                        viewModel.setTrainingDailyTarget(Int(temporaryTrainingDailyTarget))
                         editingTargetMetric = nil
                     }
                     .font(.system(size: 15, weight: .bold))
@@ -459,14 +456,14 @@ public struct SummaryView: View {
     
     @ViewBuilder
     private func trainingPresetButton(minutes: Int) -> some View {
-        let isSelected = (Int(temporaryTrainingTarget) == minutes)
+        let isSelected = (Int(temporaryTrainingDailyTarget) == minutes)
         
         Button {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.prepare()
             generator.impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                temporaryTrainingTarget = Double(minutes)
+                temporaryTrainingDailyTarget = Double(minutes)
             }
         } label: {
             Text("\(minutes)m")

@@ -9,14 +9,15 @@ import SwiftUI
 
 /// An interactive metric card button used in the Summary view.
 /// Shows a colored title, large metric value, and two-line secondary subtitle.
-/// When tapped, activates its detailed daily chart below.
+/// Single-tap selects the metric and switches chart; double-tap opens the target editor.
 public struct SummaryMetricCardView: View {
     public let title: String
     public let titleColor: Color
     public let value: String
     public let subtitle: String
     public let isSelected: Bool
-    public let action: (() -> Void)?
+    public var onTap: (() -> Void)? = nil
+    public var onDoubleTap: (() -> Void)? = nil
     
     public init(
         title: String,
@@ -24,56 +25,64 @@ public struct SummaryMetricCardView: View {
         value: String,
         subtitle: String,
         isSelected: Bool = false,
-        action: (() -> Void)? = nil
+        action: (() -> Void)? = nil,
+        onTap: (() -> Void)? = nil,
+        onDoubleTap: (() -> Void)? = nil
     ) {
         self.title = title
         self.titleColor = titleColor
         self.value = value
         self.subtitle = subtitle
         self.isSelected = isSelected
-        self.action = action
+        self.onTap = onTap ?? action
+        self.onDoubleTap = onDoubleTap
     }
     
     public var body: some View {
-        Button {
+        VStack(spacing: 6) {
+            // Colored section title matching the concentric ring
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(titleColor)
+            
+            // Primary highlighted metric value
+            Text(value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+            
+            // Contextual subtitle (e.g., average rating, goal progress)
+            Text(subtitle)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .shadow(color: Color.black.opacity(isSelected ? 0.08 : 0.04), radius: isSelected ? 10 : 8, x: 0, y: 3)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(isSelected ? titleColor.opacity(0.65) : Color.clear, lineWidth: 1.5)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .onTapGesture(count: 2) {
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.prepare()
+            generator.impactOccurred()
+            onDoubleTap?()
+        }
+        .onTapGesture(count: 1) {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.prepare()
             generator.impactOccurred()
-            action?()
-        } label: {
-            VStack(spacing: 6) {
-                // Colored section title matching the concentric ring
-                Text(title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(titleColor)
-                
-                // Primary highlighted metric value
-                Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                
-                // Contextual subtitle (e.g., average rating, goal progress)
-                Text(subtitle)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                    .shadow(color: Color.black.opacity(isSelected ? 0.08 : 0.04), radius: isSelected ? 10 : 8, x: 0, y: 3)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(isSelected ? titleColor.opacity(0.65) : Color.clear, lineWidth: 1.5)
-            )
+            onTap?()
         }
-        .buttonStyle(.plain)
         .scaleEffect(isSelected ? 1.02 : 1.0)
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isSelected)
     }

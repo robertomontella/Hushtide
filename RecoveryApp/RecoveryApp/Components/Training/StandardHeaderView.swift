@@ -84,7 +84,7 @@ public struct StandardHeaderView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Personalize your Profile")
+                    .accessibilityLabel(profileIconName == "calendar" ? "Open calendar" : "Personalize your Profile")
                 }
             }
             .padding(.horizontal, 20)

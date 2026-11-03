@@ -124,9 +124,9 @@ public struct SummaryDetailChartView: View {
         self.sleepTargetMinutes = Int(viewModel.sleepModel.targetSleepHours * 60.0)
         
         self.trainingAverageFormatted = "\(viewModel.dailyTrainingAverageMinutes)m"
-        self.trainingTargetFormatted = "\(max(1, viewModel.trainingWeeklyMinutesTarget / 7))m"
+        self.trainingTargetFormatted = "\(viewModel.trainingDailyMinutesTarget)m"
         self.trainingMinutesPerDay = viewModel.dailyTrainingMinutes
-        self.trainingDailyTargetMinutes = max(1, viewModel.trainingWeeklyMinutesTarget / 7)
+        self.trainingDailyTargetMinutes = viewModel.trainingDailyMinutesTarget
         
         self.onEditTarget = onEditTarget
     }
@@ -145,31 +145,18 @@ public struct SummaryDetailChartView: View {
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    // Interactive Target Capsule with Pencil Edit Icon
-                    Button {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.prepare()
-                        generator.impactOccurred()
-                        onEditTarget?()
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(targetValueText)
-                                .font(.system(size: 13.5, weight: .semibold))
-                                .foregroundColor(.secondary)
-                            
-                            Image(systemName: "pencil")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(themeColor)
-                        }
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule()
-                                .fill(Color(uiColor: .systemGray6))
-                        )
+                    // Static Target Capsule (Not clickable, target changes made via double-clicking cards)
+                    HStack(spacing: 5) {
+                        Text(targetValueText)
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundColor(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Edit target for \(selectedMetric.rawValue)")
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color(uiColor: .systemGray6))
+                    )
                 }
             }
             
