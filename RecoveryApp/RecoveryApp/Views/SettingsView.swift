@@ -115,12 +115,31 @@ public struct SettingsView: View {
                 NavigationLink {
                     AboutDevelopersView()
                 } label: {
-                    settingsRowLabel(
-                        icon: "person.3.fill",
-                        color: .teal,
-                        title: "About Us • The Developers",
-                        subtitle: "Francesco Micallo, Roberto Montella and team"
-                    )
+                    HStack(spacing: 12) {
+                        Image("Untitled-iOS-Default-1024@1x")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 32, height: 32)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .shadow(color: Color.black.opacity(0.08), radius: 3, x: 0, y: 1)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("About Us • Hushtide")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.primary)
+                            Text("Francesco Micallo, Roberto Montella and team")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(uiColor: .tertiaryLabel))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
             }

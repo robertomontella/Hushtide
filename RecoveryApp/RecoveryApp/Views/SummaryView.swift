@@ -64,11 +64,6 @@ public struct SummaryView: View {
                     )
                     .padding(.top, 0)
                     
-                    // Sync Apple Health Banner (When opened without syncing Apple Health)
-                    if !viewModel.isAppleHealthSynced {
-                        appleHealthSyncBanner
-                    }
-                    
                     // 3 Metric Cards Row (Quality, Sleep, Training) - Interactive Buttons
                     metricCardsRow
                     
@@ -106,69 +101,6 @@ public struct SummaryView: View {
                     .presentationDragIndicator(.visible)
             }
         }
-    }
-    
-    // MARK: - Apple Health Sync Banner (Face ID + PIN fallback)
-    private var appleHealthSyncBanner: some View {
-        Button {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.prepare()
-            generator.impactOccurred()
-            Task {
-                await viewModel.syncHealthData(requireAuthentication: true)
-            }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(Color.blue.opacity(0.12))
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: "faceid")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.blue)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Sync Apple Health")
-                        .font(.system(size: 14.5, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    Text("Face ID required • PIN fallback")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                if viewModel.health.isSyncing {
-                    ProgressView()
-                        .tint(.blue)
-                } else {
-                    HStack(spacing: 5) {
-                        Text("Sync")
-                            .font(.system(size: 13, weight: .bold))
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(
-                        Capsule()
-                            .fill(Color.blue)
-                    )
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-            )
-        }
-        .buttonStyle(.plain)
     }
     
     // MARK: - Metric Cards Row (Interactive Buttons)

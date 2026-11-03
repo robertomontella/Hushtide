@@ -102,28 +102,19 @@ public struct AboutDevelopersView: View {
             )
             
             // App Icon Graphic
-            ZStack {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.05, green: 0.50, blue: 1.0),
-                                Color(red: 0.20, green: 0.30, blue: 0.95)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 76, height: 76)
-                    .shadow(color: Color.blue.opacity(0.3), radius: 12, x: 0, y: 6)
-                
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(.white)
-            }
+            Image("Untitled-iOS-Default-1024@1x")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
+                )
             
             VStack(spacing: 4) {
-                Text("RecoveryApp")
+                Text("Hushtide")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.primary)
                 
@@ -232,7 +223,7 @@ public struct AboutDevelopersView: View {
                         .foregroundColor(.primary)
                 }
                 
-                Text("RecoveryApp was born in Italy through the union of iOS software engineering, human-centered design, and sports science. Our mission is to translate complex biometric data from Apple Health into actionable, immediate, and privacy-first daily recovery insights.")
+                Text("Hushtide was born in Italy through the union of iOS software engineering, human-centered design, and sports science. Our mission is to translate complex biometric data from Apple Health into actionable, immediate, and privacy-first daily recovery insights.")
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.secondary)
                     .lineSpacing(2.5)
@@ -253,7 +244,7 @@ public struct AboutDevelopersView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
             
-            Text("© 2026 RecoveryApp Team. All rights reserved.")
+            Text("© 2026 Hushtide Team. All rights reserved.")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundColor(Color(uiColor: .tertiaryLabel))
         }

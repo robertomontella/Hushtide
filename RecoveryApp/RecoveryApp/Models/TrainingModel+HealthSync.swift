@@ -238,12 +238,50 @@ extension TrainingModel {
                 if offset < updatedWeeklySleep.count {
                     updatedWeeklySleep[offset] = night.asleepMinutes
                 }
+                
+                // Update this day's individual schedule record & bedtime checkmark compliance
+                if offset < sleepModel.weeklyRecords.count {
+                    let bedCalendar = Calendar.current
+                    let bHour24 = bedCalendar.component(.hour, from: night.bedtime)
+                    let bMin = bedCalendar.component(.minute, from: night.bedtime)
+                    let wHour24 = bedCalendar.component(.hour, from: night.wakeTime)
+                    let wMin = bedCalendar.component(.minute, from: night.wakeTime)
+                    let bPeriod: MeridiemPeriod = (bHour24 >= 12) ? .pm : .am
+                    var bHour12 = bHour24 % 12
+                    if bHour12 == 0 { bHour12 = 12 }
+                    let wPeriod: MeridiemPeriod = (wHour24 >= 12) ? .pm : .am
+                    var wHour12 = wHour24 % 12
+                    if wHour12 == 0 { wHour12 = 12 }
+                    
+                    var dayChecks = sleepModel.weeklyRecords[offset].checkmarks
+                    if let cIdx = dayChecks.firstIndex(where: {
+                        $0.title.localizedCaseInsensitiveContains("22:00") ||
+                        $0.title.localizedCaseInsensitiveContains("bed at 22")
+                    }) {
+                        // Bedtime at 23:00 or after 22:00 -> box is not checked
+                        let isLate = (bHour24 >= 23 || (bHour24 == 22 && bMin > 15) || bHour24 < 12)
+                        dayChecks[cIdx].isChecked = !isLate
+                    }
+                    
+                    sleepModel.weeklyRecords[offset] = DaySleepRecord(
+                        inBedHour: bHour12,
+                        inBedMinute: bMin,
+                        inBedPeriod: bPeriod,
+                        asleepHour: wHour12,
+                        asleepMinute: wMin,
+                        asleepPeriod: wPeriod,
+                        checkmarks: dayChecks,
+                        healthAsleepMinutes: night.asleepMinutes
+                    )
+                }
+                
                 if offset < updatedQualityBars.count {
                     // Evaluate this day's rest quality via RecoveryAlgorithm
+                    let dayChecks = (offset < sleepModel.weeklyRecords.count) ? sleepModel.weeklyRecords[offset].checkmarks : sleepModel.checkmarks
                     let (dayQuality, _, _, _) = RecoveryAlgorithm.calculateRestQuality(
                         currentNight: night,
                         targetSleepHours: sleepModel.targetSleepHours,
-                        checkmarks: sleepModel.checkmarks,
+                        checkmarks: dayChecks,
                         restingHeartRate: rhr,
                         restingHeartRateBaseline: rhrBaseline
                     )
@@ -271,6 +309,7 @@ extension TrainingModel {
             var wakeHour12 = wakeHour24 % 12
             if wakeHour12 == 0 { wakeHour12 = 12 }
             sleepModel.setAsleep(hour: wakeHour12, minute: wakeMin, period: wakePeriod)
+            sleepModel.updateBedtimeCheckmarkCompliance()
         }
 
         // Compute Sleep Debt (difference between actual weekly average and target)
