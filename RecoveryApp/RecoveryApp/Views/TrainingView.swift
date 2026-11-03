@@ -76,7 +76,9 @@ public struct TrainingView: View {
             }
             .scrollBounceBehavior(.always, axes: .vertical)
             .refreshable {
-                await viewModel.syncHealthData(requireAuthentication: true)
+                if viewModel.isAppleHealthConnected {
+                    await viewModel.syncHealthData(requireAuthentication: false)
+                }
             }
             
             // MARK: - Top-Down Drop-Down Calendar (Slides from Top to Bottom)

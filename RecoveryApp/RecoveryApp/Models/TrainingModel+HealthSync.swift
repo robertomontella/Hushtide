@@ -6,6 +6,13 @@ extension TrainingModel {
     @MainActor
     public func startHealthSync() async {
         await health.refreshAuthorizationStatus()
+        // If the user previously connected Apple Health, keep data synchronized continuously
+        if isAppleHealthConnected {
+            health.startObserving { [weak self] in
+                self?.scheduleHealthSync()
+            }
+            await performHealthDataSync()
+        }
     }
 
     @MainActor
@@ -35,9 +42,11 @@ extension TrainingModel {
         HapticManager.notification(.success)
     }
 
-    /// Public sync entry point: Face ID is required by default (with PIN fallback).
+    /// Public sync entry point: default is background/pull-to-refresh (requireAuthentication: false).
+    /// Synchronization remains continuous across app restarts and only stops when explicitly stopped by the user.
     @MainActor
-    public func syncHealthData(requireAuthentication: Bool = true) async {
+    public func syncHealthData(requireAuthentication: Bool = false) async {
+        guard isAppleHealthConnected else { return }
         if requireAuthentication {
             let authenticated = await BiometricAuthService.authenticateForHealthSync(
                 reason: "Face ID is required to sync Apple Health data. If Face ID is not recognized, enter your phone PIN."
@@ -47,10 +56,6 @@ extension TrainingModel {
                 return
             }
         }
-        
-        isAppleHealthConnected = true
-        isAppleHealthSynced = true
-        sleepModel.isAppleHealthSynced = true
         
         await performHealthDataSync()
 
@@ -113,6 +118,12 @@ extension TrainingModel {
         // 4. Profile (fills empty fields)
         let weightKg = try? await health.latestQuantity(.bodyMass, unit: .gramUnit(with: .kilo))
         let heightCm = try? await health.latestQuantity(.height, unit: .meterUnit(with: .centi))
+
+        // Cache heart metrics on TrainingModel for all day evaluations
+        self.latestHRV = hrvToday
+        self.baselineHRV = hrvBaseline
+        self.latestRHR = rhrToday
+        self.baselineRHR = rhrBaseline
 
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             applySleep(nights: nights, today: today, startOfWeek: startOfWeek, rhr: rhrToday, rhrBaseline: rhrBaseline)
@@ -280,24 +291,9 @@ extension TrainingModel {
         sleepModel.weeklySleepMinutes = updatedWeeklySleep
         weeklyQualityPercentages = updatedQualityBars
 
-        // If today's night exists, update bedtime and wake time
-        if let todayNight = nights[today] {
-            let bedCalendar = Calendar.current
-            let bedHour24 = bedCalendar.component(.hour, from: todayNight.bedtime)
-            let bedMin = bedCalendar.component(.minute, from: todayNight.bedtime)
-            let bedPeriod: MeridiemPeriod = (bedHour24 >= 12) ? .pm : .am
-            var bedHour12 = bedHour24 % 12
-            if bedHour12 == 0 { bedHour12 = 12 }
-            sleepModel.setInBed(hour: bedHour12, minute: bedMin, period: bedPeriod)
-
-            let wakeHour24 = bedCalendar.component(.hour, from: todayNight.wakeTime)
-            let wakeMin = bedCalendar.component(.minute, from: todayNight.wakeTime)
-            let wakePeriod: MeridiemPeriod = (wakeHour24 >= 12) ? .pm : .am
-            var wakeHour12 = wakeHour24 % 12
-            if wakeHour12 == 0 { wakeHour12 = 12 }
-            sleepModel.setAsleep(hour: wakeHour12, minute: wakeMin, period: wakePeriod)
-            sleepModel.updateBedtimeCheckmarkCompliance()
-        }
+        // Ensure the active selected day in sleepModel has its record and minutes immediately loaded
+        let activeIndex = calendarModel.selectedDayIndex
+        sleepModel.selectDay(at: activeIndex)
 
         // Compute Sleep Debt (difference between actual weekly average and target)
         let debt = sleepModel.weeklyAverageMinutes - Int(targetMinutes)

@@ -54,9 +54,7 @@ public struct SleepView: View {
                         showProfileButton: true, // Enables top-right corner action button
                         profileIconName: "calendar", // Renders calendar icon for date picker
                         onSelectDay: { index in
-                            calendarModel.selectDay(at: index)
                             viewModel.selectDay(at: index)
-                            sleepModel.selectDay(at: index)
                         },
                         onProfileTap: {
                             HapticManager.impact(.light)
@@ -126,7 +124,9 @@ public struct SleepView: View {
             }
             .scrollBounceBehavior(.always, axes: .vertical)
             .refreshable {
-                await viewModel.syncHealthData(requireAuthentication: true)
+                if viewModel.isAppleHealthConnected {
+                    await viewModel.syncHealthData(requireAuthentication: false)
+                }
             }
             
             // MARK: - Top-Down Drop-Down Calendar (Slides from Top to Bottom)
@@ -191,6 +191,8 @@ public struct SleepView: View {
         .onAppear {
             sleepModel.checkAndPerformDailyResetIfNeeded()
             sleepModel.targetSleepHours = viewModel.sleepTargetHours
+            sleepModel.selectDay(at: calendarModel.selectedDayIndex)
+            viewModel.evaluateRecovery()
         }
     }
     
@@ -203,8 +205,11 @@ public struct SleepView: View {
     
     private func loadSleepFromHealth() async {
         guard viewModel.isAppleHealthConnected else { return }
-        let night = try? await viewModel.health.fetchSleepNight(endingOn: calendarModel.selectedDate)
-        sleepModel.apply(night: night)
+        sleepModel.selectDay(at: calendarModel.selectedDayIndex)
+        if let night = try? await viewModel.health.fetchSleepNight(endingOn: calendarModel.selectedDate) {
+            sleepModel.apply(night: night)
+        }
+        viewModel.evaluateRecovery()
     }
     
     // MARK: - Calendar Drop-Down Panel View (Slides Down from Top)

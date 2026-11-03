@@ -64,7 +64,9 @@ public struct SummaryView: View {
                 .padding(.top, 2)
             }
             .refreshable {
-                await viewModel.syncHealthData(requireAuthentication: true)
+                if viewModel.isAppleHealthConnected {
+                    await viewModel.syncHealthData(requireAuthentication: false)
+                }
             }
         }
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())

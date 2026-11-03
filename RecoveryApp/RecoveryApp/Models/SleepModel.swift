@@ -162,7 +162,9 @@ public final class SleepModel {
             }
         }
         if selectedDayIndex >= 0 && selectedDayIndex < list.count {
-            list[selectedDayIndex] = durationMinutes
+            if durationMinutes > 0 {
+                list[selectedDayIndex] = durationMinutes
+            }
         }
         return list
     }
@@ -233,12 +235,7 @@ public final class SleepModel {
     
     /// Fills bedtime / wake-up time and duration with a night read from HealthKit.
     public func apply(night: SleepNight?) {
-        guard let night else {
-            healthAsleepMinutes = nil
-            syncCurrentToRecord()
-            onStateChanged?()
-            return
-        }
+        guard let night else { return }
         let calendar = Calendar.current
         let bed = calendar.dateComponents([.hour, .minute], from: night.bedtime)
         let wake = calendar.dateComponents([.hour, .minute], from: night.wakeTime)
@@ -268,7 +265,15 @@ public final class SleepModel {
     // MARK: - Dynamic Sleep Duration Calculations
     public var durationMinutes: Int {
         if isSelectedDayInFuture || !isAppleHealthSynced { return 0 }
-        if let healthAsleepMinutes { return healthAsleepMinutes }
+        if let healthAsleepMinutes, healthAsleepMinutes > 0 { return healthAsleepMinutes }
+        if selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count,
+           let recordMins = weeklyRecords[selectedDayIndex].healthAsleepMinutes, recordMins > 0 {
+            return recordMins
+        }
+        if selectedDayIndex >= 0 && selectedDayIndex < weeklySleepMinutes.count,
+           weeklySleepMinutes[selectedDayIndex] > 0 {
+            return weeklySleepMinutes[selectedDayIndex]
+        }
         guard inBedHour > 0 || asleepHour > 0 else { return 0 }
         let bedMins = toMinutesFromMidnight(hour: inBedHour, minute: inBedMinute, period: inBedPeriod)
         let wakeMins = toMinutesFromMidnight(hour: asleepHour, minute: asleepMinute, period: asleepPeriod)
@@ -530,7 +535,6 @@ public final class SleepModel {
     
     public func selectDay(at index: Int) {
         guard index >= 0 && index < weeklyRecords.count else { return }
-        syncCurrentToRecord()
         selectedDayIndex = index
         let record = weeklyRecords[index]
         inBedHour = record.inBedHour
@@ -540,7 +544,26 @@ public final class SleepModel {
         asleepMinute = record.asleepMinute
         asleepPeriod = record.asleepPeriod
         checkmarks = record.checkmarks
-        healthAsleepMinutes = record.healthAsleepMinutes
+        healthAsleepMinutes = record.healthAsleepMinutes ?? (weeklySleepMinutes[index] > 0 ? weeklySleepMinutes[index] : nil)
+        
+        // If times are 0 but we have sleep minutes, construct sensible bedtime & wake-up time
+        if (inBedHour == 0 && asleepHour == 0), let minutes = healthAsleepMinutes, minutes > 0 {
+            let wakeHour = 7
+            let wakeMinute = 0
+            let wakeTotal = wakeHour * 60 + wakeMinute
+            var bedTotal = wakeTotal - minutes
+            if bedTotal < 0 { bedTotal += 24 * 60 }
+            let bH = bedTotal / 60
+            let bM = bedTotal % 60
+            let (bHour12, bPeriod) = Self.to12h(bH)
+            inBedHour = bHour12
+            inBedMinute = bM
+            inBedPeriod = bPeriod
+            asleepHour = wakeHour
+            asleepMinute = wakeMinute
+            asleepPeriod = .am
+        }
+        
         updateBedtimeCheckmarkCompliance()
         syncCurrentToRecord()
     }
@@ -596,6 +619,15 @@ public final class SleepModel {
         var wakeHour24 = asleepHour
         if asleepPeriod == .pm && wakeHour24 < 12 { wakeHour24 += 12 }
         if asleepPeriod == .am && wakeHour24 == 12 { wakeHour24 = 0 }
+        
+        // If times are unconfigured but we have sleep minutes, anchor to standard 7:00 AM wake time
+        if bedHour24 == 0 && wakeHour24 == 0 && asleepMins > 0 {
+            wakeHour24 = 7
+            let wakeTotal = 7 * 60
+            var bedTotal = wakeTotal - asleepMins
+            if bedTotal < 0 { bedTotal += 24 * 60 }
+            bedHour24 = bedTotal / 60
+        }
         
         let bedtime = calendar.date(bySettingHour: bedHour24, minute: inBedMinute, second: 0, of: previousDay) ?? previousDay
         let wakeTime = calendar.date(bySettingHour: wakeHour24, minute: asleepMinute, second: 0, of: resolvedDay) ?? resolvedDay

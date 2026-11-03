@@ -232,6 +232,9 @@ public final class TrainingModel {
         public static let isReduceMotionEnabled = "RecoveryApp_isReduceMotionEnabled"
         public static let isHighContrastEnabled = "RecoveryApp_isHighContrastEnabled"
         public static let hasInitializedBaseline = "RecoveryApp_hasInitializedBaseline"
+        public static let isAppleHealthConnected = "RecoveryApp_isAppleHealthConnected"
+        public static let isAppleHealthSynced = "RecoveryApp_isAppleHealthSynced"
+        public static let isAppleIdSignedIn = "RecoveryApp_isAppleIdSignedIn"
     }
     
     // MARK: - Settings & Accessibility State
@@ -288,9 +291,28 @@ public final class TrainingModel {
     public var gender: String = "-"
     public var weight: String = "-"
     public var height: String = "-"
-    public var isAppleHealthConnected: Bool = false
-    public var isAppleIdSignedIn: Bool = false
-    public var isAppleHealthSynced: Bool = false
+    public var isAppleHealthConnected: Bool = false {
+        didSet {
+            UserDefaults.standard.set(isAppleHealthConnected, forKey: StorageKeys.isAppleHealthConnected)
+        }
+    }
+    public var isAppleIdSignedIn: Bool = false {
+        didSet {
+            UserDefaults.standard.set(isAppleIdSignedIn, forKey: StorageKeys.isAppleIdSignedIn)
+        }
+    }
+    public var isAppleHealthSynced: Bool = false {
+        didSet {
+            UserDefaults.standard.set(isAppleHealthSynced, forKey: StorageKeys.isAppleHealthSynced)
+            sleepModel.isAppleHealthSynced = isAppleHealthSynced
+        }
+    }
+    
+    // Cached heart metrics for continuous recovery algorithm evaluation
+    public var latestHRV: Double? = nil
+    public var baselineHRV: Double? = nil
+    public var latestRHR: Double? = nil
+    public var baselineRHR: Double? = nil
     
     // MARK: - Apple Health (HealthKit) Manager
     public let health = HealthKitManager()
@@ -348,9 +370,18 @@ public final class TrainingModel {
             self.loggedWorkouts = []
         }
 
+        // Restore persistent Apple Health synchronization states
+        let connectedStored = UserDefaults.standard.bool(forKey: StorageKeys.isAppleHealthConnected)
+        let syncedStored = UserDefaults.standard.bool(forKey: StorageKeys.isAppleHealthSynced)
+        let appleIdStored = UserDefaults.standard.bool(forKey: StorageKeys.isAppleIdSignedIn)
+        self.isAppleHealthConnected = connectedStored
+        self.isAppleHealthSynced = syncedStored
+        self.isAppleIdSignedIn = appleIdStored
+
         self.sleepModel.calendarModel = self.calendarModel
-        self.sleepModel.isAppleHealthSynced = false
+        self.sleepModel.isAppleHealthSynced = syncedStored
         self.sleepModel.checkAndPerformDailyResetIfNeeded()
+        self.sleepModel.selectDay(at: self.calendarModel.selectedDayIndex)
         self.sleepModel.onStateChanged = { [weak self] in
             self?.evaluateRecovery()
         }
@@ -647,10 +678,10 @@ public final class TrainingModel {
             recentNights: recentNights,
             targetSleepHours: sleepModel.targetSleepHours,
             checkmarks: sleepModel.checkmarks,
-            restingHeartRate: nil,
-            restingHeartRateBaseline: nil,
-            heartRateVariability: nil,
-            heartRateVariabilityBaseline: nil,
+            restingHeartRate: latestRHR,
+            restingHeartRateBaseline: baselineRHR,
+            heartRateVariability: latestHRV,
+            heartRateVariabilityBaseline: baselineHRV,
             recentWorkouts: workoutsAsHealth,
             evaluationDate: dateForDay(at: selectedDayIndex)
         )
@@ -790,6 +821,10 @@ public final class TrainingModel {
             isAppleIdSignedIn = false
             isAppleHealthConnected = false
             isAppleHealthSynced = false
+            latestHRV = nil
+            baselineHRV = nil
+            latestRHR = nil
+            baselineRHR = nil
             sleepModel.resetToZero()
             loggedWorkouts = []
             evaluateRecovery()
