@@ -1,15 +1,8 @@
-//
-//  SummaryRingsView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
-/// A clean, non-elaborate concentric rings chart for the Summary view.
-/// Displays three concentric progress rings representing Quality, Sleep, and Training metrics.
 public struct SummaryRingsView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.appReduceMotion) private var appReduceMotion
     
     // MARK: - Ring Colors (Pixel-matched with design)
     // Outer Ring: Mint / Teal (Quality)
@@ -91,10 +84,12 @@ public struct SummaryRingsView: View {
         progress: Double,
         rotationDegrees: Double
     ) -> some View {
-        ZStack {
-            // Full background track circle in soft pastel tint
+        let strokeW: CGFloat = appHighContrast ? (strokeWidth + 2) : strokeWidth
+        
+        return ZStack {
+            // Full background track circle in soft pastel tint (enhanced in high contrast)
             Circle()
-                .stroke(trackColor, lineWidth: strokeWidth)
+                .stroke(appHighContrast ? trackColor.opacity(0.85) : trackColor, lineWidth: strokeW)
                 .frame(width: diameter, height: diameter)
             
             // Active progress arc with clean rounded caps on both ends (only drawn when progress > 0)
@@ -103,11 +98,11 @@ public struct SummaryRingsView: View {
                     .trim(from: 0.0, to: min(max(progress, 0.0), 1.0))
                     .stroke(
                         activeColor,
-                        style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
+                        style: StrokeStyle(lineWidth: strokeW, lineCap: .round)
                     )
                     .frame(width: diameter, height: diameter)
                     .rotationEffect(.degrees(rotationDegrees))
-                    .animation(.spring(response: 0.55, dampingFraction: 0.8), value: progress)
+                    .animation(appReduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.8), value: progress)
             }
         }
     }

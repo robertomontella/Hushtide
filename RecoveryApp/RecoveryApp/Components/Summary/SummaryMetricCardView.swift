@@ -1,16 +1,9 @@
-//
-//  SummaryMetricCardView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
-/// An interactive metric card button used in the Summary view.
-/// Shows a colored title, large metric value, and two-line secondary subtitle.
-/// Single-tap selects the metric and switches chart; double-tap opens the target editor.
 public struct SummaryMetricCardView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.appReduceMotion) private var appReduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     public let title: String
     public let titleColor: Color
     public let value: String
@@ -52,8 +45,8 @@ public struct SummaryMetricCardView: View {
             
             // Contextual subtitle (e.g., average rating, goal progress)
             Text(subtitle)
-                .font(.system(size: 11, weight: .regular))
-                .foregroundColor(.secondary)
+                .font(.system(size: 11, weight: appHighContrast ? .semibold : .regular))
+                .foregroundColor(appHighContrast ? .primary : .secondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -68,23 +61,24 @@ public struct SummaryMetricCardView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isSelected ? titleColor.opacity(0.65) : Color.clear, lineWidth: 1.5)
+                .stroke(
+                    isSelected
+                        ? titleColor
+                        : (appHighContrast ? (colorScheme == .dark ? Color.white : Color.black) : Color.clear),
+                    lineWidth: appHighContrast ? 2.5 : (isSelected ? 1.5 : 0)
+                )
         )
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture(count: 2) {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.prepare()
-            generator.impactOccurred()
+            HapticManager.impact(.medium)
             onDoubleTap?()
         }
         .onTapGesture(count: 1) {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
+            HapticManager.impact(.light)
             onTap?()
         }
-        .scaleEffect(isSelected ? 1.02 : 1.0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isSelected)
+        .scaleEffect(isSelected && !appReduceMotion ? 1.02 : 1.0)
+        .animation(appReduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.75), value: isSelected)
     }
 }
 

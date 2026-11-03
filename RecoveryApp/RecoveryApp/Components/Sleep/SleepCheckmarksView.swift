@@ -1,13 +1,8 @@
-//
-//  SleepCheckmarksView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
 public struct SleepCheckmarksView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.colorScheme) private var colorScheme
     public let sectionTitle: String
     public let recommendationNote: String
     public let checkmarks: [SleepCheckmarkItem]
@@ -45,9 +40,7 @@ public struct SleepCheckmarksView: View {
                 Spacer()
                 
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     onManageCheckmarks?()
                 } label: {
                     HStack(spacing: 4) {
@@ -94,7 +87,7 @@ public struct SleepCheckmarksView: View {
                                                     .frame(width: 26, height: 26)
                                                     .overlay(
                                                         RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                                            .stroke(item.isChecked ? accentColor : Color(uiColor: .systemGray4), lineWidth: 1.8)
+                                                            .stroke(item.isChecked ? accentColor : (appHighContrast ? (colorScheme == .dark ? Color.white : Color.black) : Color(uiColor: .systemGray4)), lineWidth: appHighContrast ? 2.5 : 1.8)
                                                     )
                                                 
                                                 if item.isChecked {
@@ -107,7 +100,7 @@ public struct SleepCheckmarksView: View {
                                             
                                             // Checkmark Label
                                             Text(item.title)
-                                                .font(.system(size: 15, weight: .bold))
+                                                .font(.system(size: 15, weight: appHighContrast ? .black : .bold))
                                                 .foregroundColor(.primary)
                                                 .multilineTextAlignment(.leading)
                                         }
@@ -119,9 +112,7 @@ public struct SleepCheckmarksView: View {
                                     
                                     // Edit Checkmark Button
                                     Button {
-                                        let generator = UIImpactFeedbackGenerator(style: .light)
-                                        generator.prepare()
-                                        generator.impactOccurred()
+                                        HapticManager.impact(.light)
                                         onEditCheckmark?(item)
                                     } label: {
                                         Image(systemName: "pencil")
@@ -141,8 +132,8 @@ public struct SleepCheckmarksView: View {
                 
                 // Explanatory Recommendation Note
                 Text(recommendationNote)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: appHighContrast ? .semibold : .regular))
+                    .foregroundColor(appHighContrast ? .primary : .secondary)
                     .lineSpacing(2)
             }
             .padding(.horizontal, 16)
@@ -153,7 +144,12 @@ public struct SleepCheckmarksView: View {
                     .fill(Color(uiColor: .secondarySystemGroupedBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(Color(uiColor: .separator).opacity(0.25), lineWidth: 0.5)
+                            .stroke(
+                                appHighContrast
+                                    ? (colorScheme == .dark ? Color.white : Color.black)
+                                    : Color(uiColor: .separator).opacity(0.25),
+                                lineWidth: appHighContrast ? 2.0 : 0.5
+                            )
                     )
                     .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 3)
             )

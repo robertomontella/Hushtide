@@ -1,13 +1,8 @@
-//
-//  SleepCardView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
 public struct SleepCardView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.colorScheme) private var colorScheme
     public let progress: Double
     public let durationText: String
     public let targetText: String
@@ -81,7 +76,12 @@ public struct SleepCardView: View {
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color(uiColor: .separator).opacity(0.25), lineWidth: 0.5)
+                        .stroke(
+                            appHighContrast
+                                ? (colorScheme == .dark ? Color.white : Color.black)
+                                : Color(uiColor: .separator).opacity(0.25),
+                            lineWidth: appHighContrast ? 2.0 : 0.5
+                        )
                 )
                 .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 3)
         )

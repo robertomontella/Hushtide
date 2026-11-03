@@ -1,10 +1,3 @@
-//
-//  TraningClass.swift
-//  RecoveryApp
-//
-//  Created by AFP FED 020 on 30/10/2026.
-//
-
 import SwiftUI
 
 // MARK: - Navigation Tabs
@@ -59,7 +52,7 @@ public struct DayItem: Identifiable, Hashable {
 }
 
 // MARK: - Intensity Level
-public enum IntensityLevel: String, CaseIterable, Identifiable {
+public enum IntensityLevel: String, CaseIterable, Identifiable, Codable {
     case rest = "Rest"
     case light = "Light"
     case medium = "Medium"
@@ -171,7 +164,7 @@ public struct SecondaryMetric: Identifiable {
 }
 
 // MARK: - Logged Workout Item
-public struct LoggedWorkout: Identifiable {
+public struct LoggedWorkout: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
     /// UUID of the matching HKWorkout in Apple Health (nil = only stored in the app)
     public var healthKitUUID: UUID?
@@ -196,7 +189,7 @@ public struct LoggedWorkout: Identifiable {
         notes: String = "",
         healthKitUUID: UUID? = nil
     ) {
-        self.id = healthKitUUID ?? UUID()
+        self.id = id
         self.healthKitUUID = healthKitUUID
         self.sportType = sportType
         self.intensity = intensity

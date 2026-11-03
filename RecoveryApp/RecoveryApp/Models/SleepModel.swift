@@ -1,15 +1,8 @@
-//
-//  SleepModel.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 import Observation
 
 // MARK: - Meridiem Period (AM / PM)
-public enum MeridiemPeriod: String, CaseIterable, Identifiable {
+public enum MeridiemPeriod: String, CaseIterable, Identifiable, Codable {
     case am = "AM"
     case pm = "PM"
     
@@ -17,7 +10,7 @@ public enum MeridiemPeriod: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Sleep Checkmark Item
-public struct SleepCheckmarkItem: Identifiable, Hashable {
+public struct SleepCheckmarkItem: Identifiable, Hashable, Codable {
     public let id: UUID
     public var title: String
     public var isChecked: Bool
@@ -30,7 +23,7 @@ public struct SleepCheckmarkItem: Identifiable, Hashable {
 }
 
 // MARK: - Day Sleep Record
-public struct DaySleepRecord: Hashable {
+public struct DaySleepRecord: Hashable, Codable {
     public var inBedHour: Int
     public var inBedMinute: Int
     public var inBedPeriod: MeridiemPeriod
@@ -128,34 +121,34 @@ public final class SleepModel {
     // When opened without syncing Apple Health, all values default to zero
     public var weeklySleepMinutes: [Int] = [0, 0, 0, 0, 0, 0, 0]
     
-    // 7-day individual records for full schedule and checkmark persistence (defaults to showing a checkmark for "go to bed at 22:00")
+    // 7-day individual records for full schedule and checkmark persistence (defaults to all unchecked)
     public var weeklyRecords: [DaySleepRecord] = [
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ])
     ]
@@ -252,7 +245,7 @@ public final class SleepModel {
         let (bedH, bedP) = Self.to12h(bed.hour ?? 0)
         let (wakeH, wakeP) = Self.to12h(wake.hour ?? 0)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             inBedHour = bedH
             inBedMinute = bed.minute ?? 0
             inBedPeriod = bedP
@@ -313,36 +306,76 @@ public final class SleepModel {
         return min(1.0, max(0.0, Double(durationMinutes) / targetMins))
     }
     
-    // MARK: - Recommendations & Checkmarks (Defaults to checked for "Go to bed at 22:00")
+    // MARK: - Storage Keys
+    private enum StorageKeys {
+        static let lastCheckmarksResetDate = "RecoveryApp_lastCheckmarksResetDate"
+    }
+    
+    // MARK: - Recommendations & Checkmarks (Defaults to false: refreshed fresh each day)
     public var checkmarksSectionTitle: String = "Checkmarks"
     public var checkmarksSubtitle: String = "Based on your weekly workouts and daily routine, we recommend that you:"
     
     public var checkmarks: [SleepCheckmarkItem] = [
-        SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+        SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
         SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
     ]
     
+    // MARK: - Daily Checkmarks Reset
+    public var lastCheckmarksResetDate: Date? {
+        get {
+            UserDefaults.standard.object(forKey: StorageKeys.lastCheckmarksResetDate) as? Date
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: StorageKeys.lastCheckmarksResetDate)
+        }
+    }
+    
+    /// Verifies if a new day has started; if so, resets all checkmarks to false.
+    public func checkAndPerformDailyResetIfNeeded() {
+        let calendar = Calendar.current
+        if let lastReset = lastCheckmarksResetDate {
+            if !calendar.isDateInToday(lastReset) {
+                resetCheckmarksForNewDay()
+            }
+        } else {
+            resetCheckmarksForNewDay()
+        }
+    }
+    
+    /// Forces resetting all checkmarks to false and updates timestamp to today.
+    public func resetCheckmarksForNewDay() {
+        for i in 0..<checkmarks.count {
+            checkmarks[i].isChecked = false
+        }
+        for d in 0..<weeklyRecords.count {
+            for c in 0..<weeklyRecords[d].checkmarks.count {
+                weeklyRecords[d].checkmarks[c].isChecked = false
+            }
+        }
+        lastCheckmarksResetDate = Date()
+        syncCurrentToRecord()
+        onStateChanged?()
+    }
+    
     // MARK: - Bedtime Checkmark Auto-Evaluation
-    /// Defaults to showing a checkmark for "Go to bed at 22:00",
-    /// but if sleep data indicates going to bed at 23:00 (or after 22:00), the box is unchecked.
+    /// If sleep data indicates going to bed late (at 23:00 or after 22:15), uncheck the box.
     public func updateBedtimeCheckmarkCompliance() {
         guard let index = checkmarks.firstIndex(where: {
             $0.title.localizedCaseInsensitiveContains("22:00") ||
             $0.title.localizedCaseInsensitiveContains("bed at 22")
         }) else { return }
         
-        // If uninitialized / 0 / no bedtime set, defaults to showing checkmark as requested
-        guard inBedHour > 0 || asleepHour > 0 else {
-            checkmarks[index].isChecked = true
-            return
-        }
+        // If uninitialized / 0 / no bedtime set, do not force checkmark to true
+        guard inBedHour > 0 || asleepHour > 0 else { return }
         
         var hour24 = inBedHour % 12
         if inBedPeriod == .pm { hour24 += 12 }
         
         // Bedtime at 23:00 or later (including past midnight) does NOT meet 22:00 target
         let isLateBedtime = (hour24 >= 23 || (hour24 == 22 && inBedMinute > 15) || hour24 < 12)
-        checkmarks[index].isChecked = !isLateBedtime
+        if isLateBedtime {
+            checkmarks[index].isChecked = false
+        }
     }
     
     // MARK: - Reset to Zero State
@@ -355,7 +388,7 @@ public final class SleepModel {
         asleepHour = 0
         asleepMinute = 0
         checkmarks = [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
             SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]
         weeklyRecords = (0..<7).map { _ in
@@ -367,7 +400,7 @@ public final class SleepModel {
                 asleepMinute: 0,
                 asleepPeriod: .am,
                 checkmarks: [
-                    SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
+                    SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
                     SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
                 ]
             )
@@ -376,6 +409,7 @@ public final class SleepModel {
     
     // MARK: - Initializer
     public init() {
+        checkAndPerformDailyResetIfNeeded()
         updateBedtimeCheckmarkCompliance()
     }
     
@@ -401,11 +435,9 @@ public final class SleepModel {
     
     public func setInBedPeriod(_ period: MeridiemPeriod) {
         guard inBedPeriod != period else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             inBedPeriod = period
             updateBedtimeCheckmarkCompliance()
             syncCurrentToRecord()
@@ -415,11 +447,9 @@ public final class SleepModel {
     
     public func setAsleepPeriod(_ period: MeridiemPeriod) {
         guard asleepPeriod != period else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             asleepPeriod = period
             syncCurrentToRecord()
         }
@@ -435,11 +465,9 @@ public final class SleepModel {
     }
     
     public func setTargetSleepHours(_ hours: Double) {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             targetSleepHours = max(4.0, min(14.0, hours))
         }
         onStateChanged?()
@@ -447,12 +475,10 @@ public final class SleepModel {
     
     // MARK: - Checkmark Actions
     public func toggleCheckmark(id: UUID) {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
         if let index = checkmarks.firstIndex(where: { $0.id == id }) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                 checkmarks[index].isChecked.toggle()
                 syncCurrentToRecord()
             }
@@ -463,11 +489,9 @@ public final class SleepModel {
     public func addCheckmark(title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        HapticManager.notification(.success)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             checkmarks.append(SleepCheckmarkItem(title: trimmed, isChecked: true))
             syncCurrentToRecord()
         }
@@ -478,7 +502,7 @@ public final class SleepModel {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         if let index = checkmarks.firstIndex(where: { $0.id == id }) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 checkmarks[index].title = trimmed
                 syncCurrentToRecord()
             }
@@ -487,11 +511,9 @@ public final class SleepModel {
     }
     
     public func deleteCheckmark(id: UUID) {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.medium)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             checkmarks.removeAll(where: { $0.id == id })
             syncCurrentToRecord()
         }
@@ -499,7 +521,7 @@ public final class SleepModel {
     }
     
     public func deleteCheckmarks(at offsets: IndexSet) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             checkmarks.remove(atOffsets: offsets)
             syncCurrentToRecord()
         }

@@ -1,10 +1,3 @@
-//
-//  SleepScheduleRowView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
 public struct SleepScheduleRowView: View {
@@ -33,9 +26,7 @@ public struct SleepScheduleRowView: View {
     
     public var body: some View {
         Button {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
+            HapticManager.impact(.light)
             onTap?()
         } label: {
             HStack(spacing: 14) {

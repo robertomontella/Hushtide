@@ -1,10 +1,3 @@
-//
-//  TrainingModel.swift
-//  RecoveryApp
-//
-//  Created by AFP FED 020 on 30/10/2026.
-//
-
 import SwiftUI
 import Observation
 import AuthenticationServices
@@ -135,19 +128,15 @@ public final class TrainingModel {
     }
     
     public func setQualityTarget(_ target: Int) {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        HapticManager.impact(.light)
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             qualityTargetPercentage = max(10, min(100, target))
         }
     }
     
     public func setTrainingDailyTarget(_ dailyMinutes: Int) {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        HapticManager.impact(.light)
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             let clamped = max(5, min(180, dailyMinutes))
             trainingDailyMinutesTarget = clamped
             trainingWeeklyMinutesTarget = clamped * 7
@@ -160,10 +149,8 @@ public final class TrainingModel {
     }
     
     public func selectSummaryMetric(_ metric: SummaryMetricTab) {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        HapticManager.impact(.light)
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             selectedSummaryMetric = metric
         }
     }
@@ -237,18 +224,47 @@ public final class TrainingModel {
     // MARK: - Intensity Selector State
     public var selectedIntensity: IntensityLevel? = nil
     
+    // MARK: - Storage Keys
+    public enum StorageKeys {
+        public static let savedWorkouts = "RecoveryApp_savedWorkouts"
+        public static let deletedWorkoutUUIDs = "RecoveryApp_deletedWorkoutUUIDs"
+        public static let isHapticsEnabled = "RecoveryApp_isHapticsEnabled"
+        public static let isReduceMotionEnabled = "RecoveryApp_isReduceMotionEnabled"
+        public static let isHighContrastEnabled = "RecoveryApp_isHighContrastEnabled"
+        public static let hasInitializedBaseline = "RecoveryApp_hasInitializedBaseline"
+    }
+    
     // MARK: - Settings & Accessibility State
     public var isHapticsEnabled: Bool = true {
         didSet {
             HapticManager.isHapticsEnabled = isHapticsEnabled
+            UserDefaults.standard.set(isHapticsEnabled, forKey: StorageKeys.isHapticsEnabled)
         }
     }
-    public var isReduceMotionEnabled: Bool = false
-    public var isHighContrastEnabled: Bool = false
+    public var isReduceMotionEnabled: Bool = false {
+        didSet {
+            HapticManager.isReduceMotionEnabled = isReduceMotionEnabled
+            UserDefaults.standard.set(isReduceMotionEnabled, forKey: StorageKeys.isReduceMotionEnabled)
+        }
+    }
+    public var isHighContrastEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(isHighContrastEnabled, forKey: StorageKeys.isHighContrastEnabled)
+        }
+    }
     public var isAnalyticsOptOut: Bool = true
     
-    // MARK: - Logged Workouts State & Feature
-    public var loggedWorkouts: [LoggedWorkout] = []
+    // MARK: - Logged Workouts State & Persistence
+    public var loggedWorkouts: [LoggedWorkout] = [] {
+        didSet {
+            saveWorkoutsToStorage()
+        }
+    }
+    public var deletedWorkoutUUIDs: Set<UUID> = [] {
+        didSet {
+            saveDeletedWorkoutUUIDsToStorage()
+        }
+    }
     
     // MARK: - Profile Screen Data (Default "User", customizable by user)
     public var userName: String = "User"
@@ -302,13 +318,55 @@ public final class TrainingModel {
     }
     
     public init() {
-        self.loggedWorkouts = []
+        // Restore accessibility settings
+        let hapticsStored = UserDefaults.standard.object(forKey: StorageKeys.isHapticsEnabled) != nil
+            ? UserDefaults.standard.bool(forKey: StorageKeys.isHapticsEnabled)
+            : true
+        self.isHapticsEnabled = hapticsStored
+        HapticManager.isHapticsEnabled = hapticsStored
+
+        let reduceMotionStored = UserDefaults.standard.bool(forKey: StorageKeys.isReduceMotionEnabled)
+        self.isReduceMotionEnabled = reduceMotionStored
+        HapticManager.isReduceMotionEnabled = reduceMotionStored
+
+        let highContrastStored = UserDefaults.standard.bool(forKey: StorageKeys.isHighContrastEnabled)
+        self.isHighContrastEnabled = highContrastStored
+
+        // Restore deleted workout UUIDs
+        if let deletedList = UserDefaults.standard.stringArray(forKey: StorageKeys.deletedWorkoutUUIDs) {
+            self.deletedWorkoutUUIDs = Set(deletedList.compactMap { UUID(uuidString: $0) })
+        }
+
+        // Restore saved workouts from persistent storage
+        if let data = UserDefaults.standard.data(forKey: StorageKeys.savedWorkouts),
+           let decoded = try? JSONDecoder().decode([LoggedWorkout].self, from: data) {
+            let activeDeleted = self.deletedWorkoutUUIDs
+            self.loggedWorkouts = decoded.filter {
+                !activeDeleted.contains($0.id) && ($0.healthKitUUID == nil || !activeDeleted.contains($0.healthKitUUID!))
+            }
+        } else {
+            self.loggedWorkouts = []
+        }
+
         self.sleepModel.calendarModel = self.calendarModel
         self.sleepModel.isAppleHealthSynced = false
+        self.sleepModel.checkAndPerformDailyResetIfNeeded()
         self.sleepModel.onStateChanged = { [weak self] in
             self?.evaluateRecovery()
         }
         evaluateRecovery()
+    }
+    
+    // MARK: - Workout Storage Helpers
+    public func saveWorkoutsToStorage() {
+        if let encoded = try? JSONEncoder().encode(loggedWorkouts) {
+            UserDefaults.standard.set(encoded, forKey: StorageKeys.savedWorkouts)
+        }
+    }
+    
+    public func saveDeletedWorkoutUUIDsToStorage() {
+        let array = deletedWorkoutUUIDs.map { $0.uuidString }
+        UserDefaults.standard.set(array, forKey: StorageKeys.deletedWorkoutUUIDs)
     }
     
     // MARK: - Dynamic Color Logic (0–39%: Red, 40–59%: Orange, 60–79%: Yellow, 80–100%: Green)
@@ -440,15 +498,15 @@ public final class TrainingModel {
             rpe: rpe,
             notes: notes
         )
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             loggedWorkouts.append(workout)
             evaluateRecovery()
         }
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        HapticManager.notification(.success)
+        saveWorkoutsToStorage()
         
-        // Write the workout to Apple Health too if authorized
+        // Write the workout to Apple Health in background if authorized
+        // Direct insertion: absolutely NO biometric authentication or Face ID prompt is triggered.
         guard health.isAuthorized && isAppleHealthConnected, health.canSaveWorkouts else { return }
         let localID = workout.id
         Task { [weak self] in
@@ -465,8 +523,10 @@ public final class TrainingModel {
                 )
                 if let uuid, let index = loggedWorkouts.firstIndex(where: { $0.id == localID }) {
                     loggedWorkouts[index].healthKitUUID = uuid
+                    saveWorkoutsToStorage()
                 }
-                await syncHealthData()
+                // Background non-authenticating data refresh to keep metrics in sync
+                await performHealthDataSync()
             } catch {
                 print("Saving workout to Apple Health failed: \(error.localizedDescription)")
             }
@@ -475,29 +535,49 @@ public final class TrainingModel {
     
     public func updateWorkout(_ workout: LoggedWorkout) {
         if let index = loggedWorkouts.firstIndex(where: { $0.id == workout.id }) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 loggedWorkouts[index] = workout
+                evaluateRecovery()
             }
-            let generator = UINotificationFeedbackGenerator()
-            generator.prepare()
-            generator.notificationOccurred(.success)
+            saveWorkoutsToStorage()
+            HapticManager.notification(.success)
         }
     }
     
     public func deleteWorkout(id: UUID) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            loggedWorkouts.removeAll { $0.id == id }
+        // Track ID and any associated HealthKit UUID as permanently deleted
+        var healthKitUUIDToDelete: UUID? = nil
+        if let workout = loggedWorkouts.first(where: { $0.id == id }) {
+            healthKitUUIDToDelete = workout.healthKitUUID
         }
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
-    }
-    public func selectIntensity(_ level: IntensityLevel) {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        deletedWorkoutUUIDs.insert(id)
+        if let hkUUID = healthKitUUIDToDelete {
+            deletedWorkoutUUIDs.insert(hkUUID)
+        }
+        saveDeletedWorkoutUUIDsToStorage()
+        
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            loggedWorkouts.removeAll {
+                $0.id == id || ($0.healthKitUUID != nil && $0.healthKitUUID == healthKitUUIDToDelete)
+            }
+            evaluateRecovery()
+        }
+        saveWorkoutsToStorage()
+        HapticManager.notification(.success)
+        
+        // Delete permanently from HealthKit in background if applicable
+        if let hkUUID = healthKitUUIDToDelete, health.isAuthorized && health.canSaveWorkouts {
+            Task { [weak self] in
+                try? await self?.health.deleteWorkout(uuid: hkUUID)
+            }
+        }
+    }
+    
+    public func selectIntensity(_ level: IntensityLevel) {
+        HapticManager.impact(.medium)
+        
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             if selectedIntensity == level {
                 // Deselect if already selected
                 selectedIntensity = nil
@@ -509,11 +589,9 @@ public final class TrainingModel {
     
     public func selectDay(at index: Int) {
         guard index >= 0 && index < days.count else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             calendarModel.selectDay(at: index)
             sleepModel.selectDay(at: index)
             evaluateRecovery()
@@ -521,17 +599,15 @@ public final class TrainingModel {
     }
     
     public func selectTab(_ tab: AppTab) {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             selectedTab = tab
         }
     }
     
     public func setReadinessScore(_ score: Double) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             readinessScore = max(0, min(100, score))
             // Reset custom text so debug slider and presets demonstrate each tier smoothly
             customRecoveryRecommendation = nil
@@ -542,7 +618,7 @@ public final class TrainingModel {
     /// Evaluates recovery based on HealthKit data or current sleep duration, checkmarks, and workout logs.
     public func evaluateRecovery() {
         if isSelectedDayInFuture || !isAppleHealthSynced {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 self.readinessScore = 0.0
                 self.qualityScore = 0
                 self._customQualityValue = nil
@@ -581,7 +657,7 @@ public final class TrainingModel {
         
         let result = RecoveryAlgorithm.evaluate(input: input)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             self.readinessScore = result.readinessScore
             self.qualityScore = result.qualityScore
             self._customQualityValue = nil
@@ -615,7 +691,7 @@ public final class TrainingModel {
         guard !trimmed.isEmpty else { return }
         
         if !customSports.contains(trimmed) && !ProfileOptions.sports.contains(trimmed) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 customSports.append(trimmed)
             }
         }
@@ -654,7 +730,7 @@ public final class TrainingModel {
     }
     
     public func updateProfileCustomImageData(_ data: Data?) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             profileCustomImageData = data
         }
         triggerSelectionHaptic()
@@ -662,17 +738,13 @@ public final class TrainingModel {
     
     // MARK: - Native Sign in with Apple Authentication Handlers
     public func startAppleSignIn() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.medium)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             self.isAppleIdSignedIn = true
         }
         
-        let notif = UINotificationFeedbackGenerator()
-        notif.prepare()
-        notif.notificationOccurred(.success)
+        HapticManager.notification(.success)
     }
     public static func resolveUserDisplayName() -> String {
         if let saved = UserDefaults.standard.string(forKey: "AppleIDUserName")?.trimmingCharacters(in: .whitespaces),
@@ -696,31 +768,25 @@ public final class TrainingModel {
                     }
                 }
                 
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                     self.isAppleIdSignedIn = true
                 }
                 
-                let generator = UINotificationFeedbackGenerator()
-                generator.prepare()
-                generator.notificationOccurred(.success)
+                HapticManager.notification(.success)
             }
         case .failure(let error):
             print("Sign in with Apple notice: \(error.localizedDescription)")
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                 self.isAppleIdSignedIn = true
             }
-            let generator = UINotificationFeedbackGenerator()
-            generator.prepare()
-            generator.notificationOccurred(.success)
+            HapticManager.notification(.success)
         }
     }
     
     public func removeHealthSync() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.medium)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             isAppleIdSignedIn = false
             isAppleHealthConnected = false
             isAppleHealthSynced = false
@@ -731,9 +797,7 @@ public final class TrainingModel {
         health.stopObserving()
         health.resetAuthorization()
         
-        let notif = UINotificationFeedbackGenerator()
-        notif.prepare()
-        notif.notificationOccurred(.warning)
+        HapticManager.notification(.warning)
     }
     
     public func signOutAppleId() {
@@ -741,25 +805,19 @@ public final class TrainingModel {
     }
     
     public func toggleAppleSignIn() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             isAppleIdSignedIn.toggle()
             isAppleHealthConnected = isAppleIdSignedIn
         }
         
         if isAppleIdSignedIn {
-            generator.notificationOccurred(.success)
+            HapticManager.notification(.success)
         } else {
-            generator.notificationOccurred(.warning)
+            HapticManager.notification(.warning)
         }
     }
     
     private func triggerSelectionHaptic() {
-        guard isHapticsEnabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
     }
 }

@@ -1,21 +1,5 @@
-//
-//  SummaryView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
-/// The main Summary dashboard view.
-/// Recreated pixel-by-pixel to match the design specifications:
-/// - Clean header with title, current date subtitle, and interactive profile button
-/// - Concentric 3-ring progress chart (Quality, Sleep, Training)
-/// - 3 interactive metric button cards (Quality, Sleep, Training)
-/// - Dynamic weekly detail chart that updates based on the selected metric:
-///   * Quality: displays chart with percentages
-///   * Sleep: displays the target 8h sleep chart with 7 day bars
-///   * Training: displays a workout duration chart similar to sleep
 public struct SummaryView: View {
     @Bindable public var viewModel: TrainingModel
     
@@ -254,10 +238,8 @@ public struct SummaryView: View {
         let isSelected = (Int(temporaryQualityTarget) == percentage)
         
         Button {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            HapticManager.impact(.light)
+            withAppAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                 temporaryQualityTarget = Double(percentage)
             }
         } label: {
@@ -359,10 +341,8 @@ public struct SummaryView: View {
         let isSelected = (abs(temporarySleepGoal - hours) < 0.05)
         
         Button {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            HapticManager.impact(.light)
+            withAppAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                 temporarySleepGoal = hours
             }
         } label: {
@@ -462,10 +442,8 @@ public struct SummaryView: View {
         let isSelected = (Int(temporaryTrainingDailyTarget) == minutes)
         
         Button {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.prepare()
-            generator.impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            HapticManager.impact(.light)
+            withAppAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                 temporaryTrainingDailyTarget = Double(minutes)
             }
         } label: {

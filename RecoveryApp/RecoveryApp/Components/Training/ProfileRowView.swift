@@ -1,13 +1,7 @@
-//
-//  ProfileRowView.swift
-//  WorkoutRecoveryApp
-//
-//  Created by Senior iOS Developer on 29/10/2026.
-//
-
 import SwiftUI
 
 public struct ProfileRowView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
     public let iconName: String
     public let iconColor: Color
     public let title: String
@@ -34,9 +28,7 @@ public struct ProfileRowView: View {
     public var body: some View {
         VStack(spacing: 0) {
             Button {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.prepare()
-                generator.impactOccurred()
+                HapticManager.impact(.light)
                 onTap?()
             } label: {
                 HStack(spacing: 14) {
@@ -48,15 +40,15 @@ public struct ProfileRowView: View {
                     
                     // Row Title
                     Text(title)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 16, weight: appHighContrast ? .bold : .medium))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
                     // Row Value (Editable)
                     Text(value)
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 15, weight: appHighContrast ? .semibold : .regular))
+                        .foregroundColor(appHighContrast ? .primary : .secondary)
                     
                     // Subtle Disclosure Chevron
                     Image(systemName: "chevron.right")

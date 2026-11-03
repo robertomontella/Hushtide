@@ -1,26 +1,13 @@
-//
-//  TrainingModel+HealthSync.swift
-//  RecoveryApp
-//
-//  Integrates Apple Health (HealthKit) synchronization with TrainingModel
-//  (readiness score, sleep metrics, workouts, and profile).
-//
-
 import SwiftUI
 import HealthKit
 
 extension TrainingModel {
 
-    // MARK: - Entry points
-
-    /// Call once at launch: checks Health authorization status without auto-syncing.
-    /// When the app is opened without syncing Apple Health data, all values remain zero.
     @MainActor
     public func startHealthSync() async {
         await health.refreshAuthorizationStatus()
     }
 
-    /// Shows Face ID / PIN prompt, requests HealthKit authorization, and performs initial sync.
     @MainActor
     public func connectAppleHealth() async {
         // Face ID is required; if unrecognized, requires the phone's PIN instead
@@ -28,9 +15,7 @@ extension TrainingModel {
             reason: "Face ID is required to connect and synchronize Apple Health data. If Face ID is not recognized, enter your phone PIN."
         )
         guard authenticated else {
-            let generator = UINotificationFeedbackGenerator()
-            generator.prepare()
-            generator.notificationOccurred(.error)
+            HapticManager.notification(.error)
             return
         }
         
@@ -47,9 +32,7 @@ extension TrainingModel {
         }
         await performHealthDataSync()
 
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        HapticManager.notification(.success)
     }
 
     /// Public sync entry point: Face ID is required by default (with PIN fallback).
@@ -60,9 +43,7 @@ extension TrainingModel {
                 reason: "Face ID is required to sync Apple Health data. If Face ID is not recognized, enter your phone PIN."
             )
             guard authenticated else {
-                let generator = UINotificationFeedbackGenerator()
-                generator.prepare()
-                generator.notificationOccurred(.error)
+                HapticManager.notification(.error)
                 return
             }
         }
@@ -73,9 +54,7 @@ extension TrainingModel {
         
         await performHealthDataSync()
 
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        HapticManager.notification(.success)
     }
 
     /// Debounced sync, used when HealthKit observer notifies of new samples.
@@ -112,8 +91,13 @@ extension TrainingModel {
 
         // 2. Workouts of the current week (Mon–Sun)
         var workouts = (try? await health.fetchWorkouts(from: startOfWeek, to: endOfWeek)) ?? []
-        if workouts.isEmpty {
+        // Discard any workouts that the user permanently deleted
+        workouts.removeAll { deletedWorkoutUUIDs.contains($0.uuid) }
+        
+        let hasInitializedBaseline = UserDefaults.standard.bool(forKey: "RecoveryApp_hasInitializedBaseline")
+        if workouts.isEmpty && loggedWorkouts.isEmpty && !hasInitializedBaseline && !deletedWorkoutUUIDs.contains(Self.baselineWorkoutUUID) {
             workouts = generateBaselineSyncedWorkouts(startOfWeek: startOfWeek, today: today)
+            UserDefaults.standard.set(true, forKey: "RecoveryApp_hasInitializedBaseline")
         }
 
         // 3. Heart metrics (today vs 30-day baseline)
@@ -130,7 +114,7 @@ extension TrainingModel {
         let weightKg = try? await health.latestQuantity(.bodyMass, unit: .gramUnit(with: .kilo))
         let heightCm = try? await health.latestQuantity(.height, unit: .meterUnit(with: .centi))
 
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             applySleep(nights: nights, today: today, startOfWeek: startOfWeek, rhr: rhrToday, rhrBaseline: rhrBaseline)
             applyWorkouts(workouts, startOfWeek: startOfWeek)
             applyRecoveryAlgorithm(
@@ -186,7 +170,10 @@ extension TrainingModel {
         return result
     }
 
+    public static let baselineWorkoutUUID = UUID(uuidString: "77777777-8888-9999-AAAA-BBBBBBBBBBBB")!
+
     private func generateBaselineSyncedWorkouts(startOfWeek: Date, today: Date) -> [HealthWorkout] {
+        guard !deletedWorkoutUUIDs.contains(Self.baselineWorkoutUUID) else { return [] }
         let calendar = Self.mondayCalendar
         var result: [HealthWorkout] = []
         
@@ -195,7 +182,7 @@ extension TrainingModel {
             let start = calendar.date(bySettingHour: 17, minute: 30, second: 0, of: wed) ?? wed
             let end = calendar.date(bySettingHour: 18, minute: 15, second: 0, of: wed) ?? wed
             result.append(HealthWorkout(
-                uuid: UUID(),
+                uuid: Self.baselineWorkoutUUID,
                 sportName: "Running",
                 start: start,
                 end: end,
@@ -324,10 +311,13 @@ extension TrainingModel {
     // MARK: - Mapping: Workouts
 
     private func applyWorkouts(_ workouts: [HealthWorkout], startOfWeek: Date) {
-        guard !workouts.isEmpty else { return }
+        // Discard any workouts that the user explicitly deleted
+        let validWorkouts = workouts.filter { !deletedWorkoutUUIDs.contains($0.uuid) }
+        guard !validWorkouts.isEmpty else { return }
 
-        let imported = workouts.map { w in
+        let imported = validWorkouts.map { w in
             LoggedWorkout(
+                id: w.uuid,
                 sportType: w.sportName,
                 intensity: w.intensity,
                 durationMinutes: w.durationMinutes,
@@ -338,9 +328,27 @@ extension TrainingModel {
                 healthKitUUID: w.uuid
             )
         }
-        // Retain local-only workouts not saved to HealthKit
-        let localOnly = loggedWorkouts.filter { $0.healthKitUUID == nil }
-        loggedWorkouts = (localOnly + imported).sorted { $0.scheduledDate < $1.scheduledDate }
+        
+        // Merge with non-deleted existing local workouts
+        var mergedMap: [UUID: LoggedWorkout] = [:]
+        for workout in loggedWorkouts {
+            if !deletedWorkoutUUIDs.contains(workout.id) && !(workout.healthKitUUID.map { deletedWorkoutUUIDs.contains($0) } ?? false) {
+                mergedMap[workout.id] = workout
+            }
+        }
+        
+        for workout in imported {
+            if !deletedWorkoutUUIDs.contains(workout.id) {
+                // If this workout already exists locally by healthKitUUID, keep the existing one
+                if let existing = loggedWorkouts.first(where: { $0.healthKitUUID == workout.healthKitUUID }) {
+                    mergedMap[existing.id] = existing
+                } else {
+                    mergedMap[workout.id] = workout
+                }
+            }
+        }
+        
+        loggedWorkouts = Array(mergedMap.values).sorted { $0.scheduledDate < $1.scheduledDate }
     }
 
     // MARK: - Mapping: Recovery Algorithm

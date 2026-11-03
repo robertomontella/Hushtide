@@ -1,15 +1,7 @@
-//
-//  Calendar.swift
-//  RecoveryApp
-//
-//  Created by AFP FED on 28/10/2026.
-//
-
 import SwiftUI
 import Observation
 
 // MARK: - Reusable Calendar Model
-/// Reusable calendar and date selection model for SleepView, TrainingView, and across the app.
 @Observable
 public final class CalendarModel {
     
@@ -71,11 +63,9 @@ public final class CalendarModel {
     // MARK: - User Intent Actions
     public func selectDay(at index: Int) {
         guard index >= 0 && index < weekDays.count else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.light)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             selectedDayIndex = index
             let newDate = dateForDay(at: index)
             self.selectedDate = newDate
@@ -83,11 +73,9 @@ public final class CalendarModel {
     }
     
     public func selectDate(_ newDate: Date) {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        HapticManager.impact(.medium)
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             selectedDate = newDate
         }
     }

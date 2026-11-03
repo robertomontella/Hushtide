@@ -1,11 +1,3 @@
-//
-//  AccessibilitySettingsView.swift
-//  RecoveryApp
-//
-//  Accessibility and digital inclusion preferences.
-//  Conforms to the European Accessibility Act (Directive EU 2019/882) and WCAG 2.1 AA.
-//
-
 import SwiftUI
 
 public struct AccessibilitySettingsView: View {

@@ -1,12 +1,3 @@
-//
-//  RecoveryAlgorithm.swift
-//  RecoveryApp
-//
-//  Clean and modular algorithm that computes Sleep Debt, Rest Levels (Quality),
-//  Sleep Regularity, and overall Readiness based on Apple Health (HealthKit) data.
-//  Also provides tailored recommendations for training intensity.
-//
-
 import Foundation
 import HealthKit
 

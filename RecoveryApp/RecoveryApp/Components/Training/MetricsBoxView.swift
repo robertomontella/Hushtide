@@ -1,13 +1,8 @@
-//
-//  MetricsBoxView.swift
-//  WorkoutRecoveryApp
-//
-//  Created by Senior iOS Developer on 29/10/2026.
-//
-
 import SwiftUI
 
 public struct MetricsBoxView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.colorScheme) private var colorScheme
     public let sleepDebtMetric: SecondaryMetric
     public let restedMetric: SecondaryMetric
     public let regularityMetric: SecondaryMetric
@@ -57,7 +52,12 @@ public struct MetricsBoxView: View {
                 .fill(Color(uiColor: .tertiarySystemGroupedBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color(uiColor: .separator).opacity(0.3), lineWidth: 0.8)
+                        .stroke(
+                            appHighContrast
+                                ? (colorScheme == .dark ? Color.white : Color.black)
+                                : Color(uiColor: .separator).opacity(0.3),
+                            lineWidth: appHighContrast ? 2.0 : 0.8
+                        )
                 )
         )
     }
@@ -66,11 +66,11 @@ public struct MetricsBoxView: View {
     private func metricColumn(title: String, value: String) -> some View {
         VStack(spacing: 3) {
             Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(.system(size: 12, weight: appHighContrast ? .bold : .medium))
+                .foregroundColor(appHighContrast ? .primary : .secondary)
             
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: appHighContrast ? .black : .bold, design: .rounded))
                 .foregroundColor(.primary)
         }
         .frame(maxWidth: .infinity)

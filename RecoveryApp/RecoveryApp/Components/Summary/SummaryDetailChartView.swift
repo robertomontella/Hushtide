@@ -1,18 +1,8 @@
-//
-//  SummaryDetailChartView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
-/// An interactive detail chart card displayed on the Summary screen.
-/// Switches dynamically between:
-/// - Quality (displays a chart with percentages)
-/// - Sleep (displays the exact weekly target and daily sleep bars as shown in design)
-/// - Training (displays a weekly workout duration chart similar to sleep)
 public struct SummaryDetailChartView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.appReduceMotion) private var appReduceMotion
     public let selectedMetric: SummaryMetricTab
     
     // Quality dynamic data
@@ -187,9 +177,9 @@ public struct SummaryDetailChartView: View {
         // Accent border matching the active metric
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(themeColor, lineWidth: 2)
+                .stroke(themeColor, lineWidth: appHighContrast ? 3.0 : 2.0)
         )
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedMetric)
+        .animation(appReduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: selectedMetric)
     }
     
     // MARK: - Column for a single day (Bar + Day Letter + Optional Percentage)
@@ -239,8 +229,8 @@ public struct SummaryDetailChartView: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(themeColor)
                 .frame(width: 22, height: height)
-                .animation(.spring(response: 0.4, dampingFraction: 0.78), value: height)
-                .animation(.easeInOut(duration: 0.25), value: themeColor)
+                .animation(appReduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.78), value: height)
+                .animation(appReduceMotion ? nil : .easeInOut(duration: 0.25), value: themeColor)
             
             // Day Letter Label
             Text(dayLetters[index])

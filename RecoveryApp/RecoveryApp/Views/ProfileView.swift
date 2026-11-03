@@ -1,10 +1,3 @@
-//
-//  ProfileView.swift
-//  RecoveryApp
-//
-//  Created by AFP FED 019 on 28/10/2026.
-//
-
 import SwiftUI
 import AuthenticationServices
 import PhotosUI
@@ -127,9 +120,7 @@ public struct ProfileView: View {
     private var topNavBar: some View {
         HStack {
             Button {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.prepare()
-                generator.impactOccurred()
+                HapticManager.impact(.light)
                 dismiss()
                 viewModel.isProfilePresented = false
             } label: {
@@ -371,9 +362,7 @@ public struct ProfileView: View {
             if viewModel.isAppleIdSignedIn {
                 // Synchronized State: Premium Apple Badge showing active synchronization
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     Task {
                         await viewModel.syncHealthData(requireAuthentication: true)
                     }
@@ -418,9 +407,7 @@ public struct ProfileView: View {
                 
                 // Option to remove synchronization
                 Button(role: .destructive) {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     isRemoveSyncConfirmationPresented = true
                 } label: {
                     HStack(spacing: 5) {
@@ -556,9 +543,7 @@ public struct ProfileView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Allow") {
-                        let generator = UINotificationFeedbackGenerator()
-                        generator.prepare()
-                        generator.notificationOccurred(.success)
+                        HapticManager.notification(.success)
                         Task {
                             await viewModel.connectAppleHealth()
                             isHealthAccessSheetPresented = false

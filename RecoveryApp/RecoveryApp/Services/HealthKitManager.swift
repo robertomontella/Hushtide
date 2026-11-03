@@ -1,10 +1,3 @@
-//
-//  HealthKitManager.swift
-//  RecoveryApp
-//
-//  Single entry point for every Apple Health (HealthKit) read/write in the app.
-//
-
 import Foundation
 import HealthKit
 import Observation
@@ -389,6 +382,20 @@ public final class HealthKitManager {
         try await builder.endCollection(at: end)
         let workout = try await builder.finishWorkout()
         return workout?.uuid
+    }
+
+    /// Deletes a workout previously saved to Apple Health by its UUID.
+    public func deleteWorkout(uuid: UUID) async throws {
+        guard isAvailable, canSaveWorkouts else { return }
+        let predicate = HKQuery.predicateForObject(with: uuid)
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.workout(predicate)],
+            sortDescriptors: [],
+            limit: 1
+        )
+        if let sample = try await descriptor.result(for: store).first {
+            try await store.delete(sample)
+        }
     }
 
     // MARK: - Mapping helpers

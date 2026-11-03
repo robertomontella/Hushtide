@@ -1,14 +1,8 @@
-//
-//  TrainingView.swift
-//  RecoveryApp
-//
-//  Created by AFP FED 019 on 28/10/2026.
-//
-
 import SwiftUI
 
 public struct TrainingView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.appHighContrast) private var appHighContrast
     @Bindable public var viewModel: TrainingModel
     @State private var isCalendarOpen: Bool = false
     @State private var isAddWorkoutPresented: Bool = false
@@ -36,16 +30,14 @@ public struct TrainingView: View {
                         showProfileButton: true, // Enables top-right corner action button
                         profileIconName: "calendar", // Renders calendar icon for date picker
                         onSelectDay: { index in
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 expandedWorkoutId = nil
                             }
                             viewModel.selectDay(at: index)
                         },
                         onProfileTap: {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.prepare()
-                            generator.impactOccurred()
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                            HapticManager.impact(.light)
+                            withAppAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                 isCalendarOpen.toggle()
                             }
                         }
@@ -55,10 +47,8 @@ public struct TrainingView: View {
                         DragGesture(minimumDistance: 20)
                             .onEnded { value in
                                 if value.translation.height > 40 && abs(value.translation.width) < 50 && !isCalendarOpen {
-                                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                                    generator.prepare()
-                                    generator.impactOccurred()
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                    HapticManager.impact(.medium)
+                                    withAppAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                         isCalendarOpen = true
                                     }
                                 }
@@ -95,7 +85,7 @@ public struct TrainingView: View {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                             isCalendarOpen = false
                         }
                     }
@@ -159,9 +149,7 @@ public struct TrainingView: View {
                 
                 // Jump to Today Pill Button
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     viewModel.calendarModel.goToToday()
                     viewModel.selectDay(at: viewModel.calendarModel.selectedDayIndex)
                 } label: {
@@ -183,10 +171,8 @@ public struct TrainingView: View {
                 
                 // Close Circle Button
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    HapticManager.impact(.light)
+                    withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                         isCalendarOpen = false
                     }
                 } label: {
@@ -228,10 +214,8 @@ public struct TrainingView: View {
                 DragGesture()
                     .onEnded { value in
                         if value.translation.height < -15 || value.translation.height > 35 {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.prepare()
-                            generator.impactOccurred()
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                            HapticManager.impact(.light)
+                            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                 isCalendarOpen = false
                             }
                         }
@@ -336,9 +320,7 @@ public struct TrainingView: View {
             if viewModel.currentDayWorkouts.isEmpty {
                 // Interactive Pill Card with Plus icon
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     isAddWorkoutPresented = true
                 } label: {
                     HStack(spacing: 14) {
@@ -385,10 +367,8 @@ public struct TrainingView: View {
                         VStack(spacing: 0) {
                             // Top Row Card Header (Tappable, ZIndex: 2, Opaque)
                             Button {
-                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                generator.prepare()
-                                generator.impactOccurred()
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                                HapticManager.impact(.light)
+                                withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                     if expandedWorkoutId == workout.id {
                                         expandedWorkoutId = nil
                                     } else {
@@ -484,9 +464,7 @@ public struct TrainingView: View {
                                     HStack(spacing: 12) {
                                         // Edit Button (Neutral Card Style with Blue Text & Icon)
                                         Button {
-                                            let generator = UIImpactFeedbackGenerator(style: .light)
-                                            generator.prepare()
-                                            generator.impactOccurred()
+                                            HapticManager.impact(.light)
                                             editingWorkout = workout
                                         } label: {
                                             HStack(spacing: 6) {
@@ -505,16 +483,19 @@ public struct TrainingView: View {
                                             )
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                    .stroke(Color(uiColor: .separator).opacity(0.4), lineWidth: 1)
+                                                    .stroke(
+                                                        appHighContrast
+                                                            ? (colorScheme == .dark ? Color.white : Color.black)
+                                                            : Color(uiColor: .separator).opacity(0.4),
+                                                        lineWidth: appHighContrast ? 2 : 1
+                                                    )
                                             )
                                         }
                                         .buttonStyle(.plain)
                                         
                                         // Delete Button (Neutral Card Style - Matching unselected intensity card)
                                         Button {
-                                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                                            generator.prepare()
-                                            generator.impactOccurred()
+                                            HapticManager.impact(.medium)
                                             workoutToDelete = workout
                                             showDeleteConfirmation = true
                                         } label: {
@@ -534,7 +515,12 @@ public struct TrainingView: View {
                                             )
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                    .stroke(Color(uiColor: .separator).opacity(0.4), lineWidth: 1)
+                                                    .stroke(
+                                                        appHighContrast
+                                                            ? (colorScheme == .dark ? Color.white : Color.black)
+                                                            : Color(uiColor: .separator).opacity(0.4),
+                                                        lineWidth: appHighContrast ? 2 : 1
+                                                    )
                                             )
                                         }
                                         .buttonStyle(.plain)
@@ -553,6 +539,15 @@ public struct TrainingView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(
+                                            appHighContrast
+                                                ? (colorScheme == .dark ? Color.white : Color.black)
+                                                : Color.clear,
+                                            lineWidth: appHighContrast ? 2 : 0
+                                        )
+                                )
                                 .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
                         )
                     }

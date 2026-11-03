@@ -1,10 +1,3 @@
-//
-//  StandardHeaderView.swift
-//  WorkoutRecoveryApp
-//
-//  Created by Senior iOS Developer on 29/10/2026.
-//
-
 import SwiftUI
 
 public struct StandardHeaderView: View {
@@ -63,9 +56,7 @@ public struct StandardHeaderView: View {
                 // Profile button EXCLUSIVELY in Summary screen (Liquid Glass style)
                 if showProfileButton {
                     Button {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.prepare()
-                        generator.impactOccurred()
+                        HapticManager.impact(.light)
                         onProfileTap?()
                     } label: {
                         ZStack {

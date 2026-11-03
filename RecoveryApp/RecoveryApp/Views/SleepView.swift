@@ -1,14 +1,8 @@
-//
-//  SleepView.swift
-//  RecoveryApp
-//
-//  Created by AFP FED 019 on 28/10/2026.
-//
-
 import SwiftUI
 
 public struct SleepView: View {
     @Bindable public var viewModel: TrainingModel
+    @Environment(\.appHighContrast) private var appHighContrast
     private var sleepModel: SleepModel { viewModel.sleepModel }
     private var calendarModel: CalendarModel { viewModel.calendarModel }
     
@@ -65,10 +59,8 @@ public struct SleepView: View {
                             sleepModel.selectDay(at: index)
                         },
                         onProfileTap: {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.prepare()
-                            generator.impactOccurred()
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                            HapticManager.impact(.light)
+                            withAppAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                 isCalendarOpen.toggle()
                             }
                         }
@@ -78,10 +70,8 @@ public struct SleepView: View {
                         DragGesture(minimumDistance: 20)
                             .onEnded { value in
                                 if value.translation.height > 40 && abs(value.translation.width) < 50 && !isCalendarOpen {
-                                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                                    generator.prepare()
-                                    generator.impactOccurred()
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                    HapticManager.impact(.medium)
+                                    withAppAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                         isCalendarOpen = true
                                     }
                                 }
@@ -145,7 +135,7 @@ public struct SleepView: View {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                             isCalendarOpen = false
                         }
                     }
@@ -199,6 +189,7 @@ public struct SleepView: View {
             await loadSleepFromHealth()
         }
         .onAppear {
+            sleepModel.checkAndPerformDailyResetIfNeeded()
             sleepModel.targetSleepHours = viewModel.sleepTargetHours
         }
     }
@@ -235,9 +226,7 @@ public struct SleepView: View {
                 
                 // Jump to Today Pill Button
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     calendarModel.goToToday()
                     viewModel.selectDay(at: calendarModel.selectedDayIndex)
                     sleepModel.selectDay(at: calendarModel.selectedDayIndex)
@@ -260,10 +249,8 @@ public struct SleepView: View {
                 
                 // Close Circle Button
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    HapticManager.impact(.light)
+                    withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                         isCalendarOpen = false
                     }
                 } label: {
@@ -306,10 +293,8 @@ public struct SleepView: View {
                 DragGesture()
                     .onEnded { value in
                         if value.translation.height < -15 || value.translation.height > 35 {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.prepare()
-                            generator.impactOccurred()
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                            HapticManager.impact(.light)
+                            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                 isCalendarOpen = false
                             }
                         }
@@ -484,7 +469,7 @@ public struct SleepView: View {
         var hour12 = hour24 % 12
         if hour12 == 0 { hour12 = 12 }
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             if type == .inBed {
                 sleepModel.setInBed(hour: hour12, minute: minute, period: period)
             } else {
@@ -492,9 +477,7 @@ public struct SleepView: View {
             }
         }
         
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
+        HapticManager.notification(.success)
     }
 }
 

@@ -1,11 +1,3 @@
-//
-//  PrivacySettingsView.swift
-//  RecoveryApp
-//
-//  Privacy policy and GDPR compliance (EU Regulation 2016/679).
-//  Specifically formulated for European and Italian data protection standards.
-//
-
 import SwiftUI
 
 public struct PrivacySettingsView: View {
@@ -90,7 +82,7 @@ public struct PrivacySettingsView: View {
                     .multilineTextAlignment(.center)
             }
             
-            Text("In RecoveryApp, privacy is the cornerstone of our architecture, not an afterthought. All health and biometric parameters are processed strictly on-device in full compliance with European and Italian privacy regulations.")
+            Text("In Hushtide, privacy is the cornerstone of our architecture, not an afterthought. All health and biometric parameters are processed strictly on-device in full compliance with European and Italian privacy regulations.")
                 .font(.system(size: 13.5, weight: .regular))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -206,9 +198,7 @@ public struct PrivacySettingsView: View {
             VStack(spacing: 0) {
                 // Portability (Art. 20)
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.light)
                     isExportSuccessAlertPresented = true
                 } label: {
                     HStack(spacing: 14) {
@@ -242,9 +232,7 @@ public struct PrivacySettingsView: View {
                 
                 // Right to Erasure (Art. 17)
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.prepare()
-                    generator.impactOccurred()
+                    HapticManager.impact(.medium)
                     isResetConfirmationPresented = true
                 } label: {
                     HStack(spacing: 14) {
@@ -285,7 +273,7 @@ public struct PrivacySettingsView: View {
     // MARK: - Legal Footer Section
     private var legalFooterSection: some View {
         VStack(spacing: 6) {
-            Text("Data Controller: RecoveryApp Development Team (Italy)")
+            Text("Data Controller: Hushtide Development Team (Italy)")
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundColor(.secondary)
             

@@ -1,7 +1,4 @@
 //
-//  RecoveryAppApp.swift
-//  RecoveryApp
-//
 //  Created by AFP FED 019 on 28/10/2026.
 //
 

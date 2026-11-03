@@ -1,13 +1,5 @@
-//
-//  ReadinessGaugeView.swift
-//  WorkoutRecoveryApp
-//
-//  Created by Senior iOS Developer on 29/10/2026.
-//
-
 import SwiftUI
 
-/// Circular arc that curves smoothly from 150° (lower-left) over the top to 30° (lower-right)
 public struct ReadinessArcShape: Shape {
     public var startAngle: Angle = .degrees(150)
     public var endAngle: Angle = .degrees(30)
@@ -39,11 +31,11 @@ public struct ReadinessArcShape: Shape {
 }
 
 public struct ReadinessRingView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.appReduceMotion) private var appReduceMotion
     public let score: Double
     public let dynamicColor: Color
     public let readinessLabel: String
-    
-    private let strokeWidth: CGFloat = 13.5
     
     public init(score: Double, dynamicColor: Color, readinessLabel: String = "READINESS") {
         self.score = score
@@ -56,24 +48,26 @@ public struct ReadinessRingView: View {
     }
     
     public var body: some View {
-        ZStack {
+        let strokeW: CGFloat = appHighContrast ? 18.0 : 13.5
+        
+        return ZStack {
             // Background Inactive Track (Full 240° Arc from 150° to 30°)
-            ReadinessArcShape(strokeWidth: strokeWidth)
+            ReadinessArcShape(strokeWidth: strokeW)
                 .stroke(
-                    Color(uiColor: .systemGray5),
-                    style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
+                    appHighContrast ? Color(uiColor: .systemGray3) : Color(uiColor: .systemGray5),
+                    style: StrokeStyle(lineWidth: strokeW, lineCap: .round)
                 )
             
             // Active Dynamic Track (Animated with spring, only drawn when score > 0)
             if progress > 0.001 {
-                ReadinessArcShape(strokeWidth: strokeWidth)
+                ReadinessArcShape(strokeWidth: strokeW)
                     .trim(from: 0.0, to: CGFloat(progress))
                     .stroke(
                         dynamicColor,
-                        style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
+                        style: StrokeStyle(lineWidth: strokeW, lineCap: .round)
                     )
-                    .animation(.spring(response: 0.55, dampingFraction: 0.8), value: score)
-                    .animation(.easeInOut(duration: 0.25), value: dynamicColor)
+                    .animation(appReduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.8), value: score)
+                    .animation(appReduceMotion ? nil : .easeInOut(duration: 0.25), value: dynamicColor)
             }
                 
             
@@ -82,7 +76,7 @@ public struct ReadinessRingView: View {
             VStack(spacing: 0) {
                 
                 Text("\(Int(round(score)))")
-                    .font(.system(size: 46, weight: .bold, design: .rounded))
+                    .font(.system(size: 46, weight: appHighContrast ? .black : .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .contentTransition(.numericText())
                     

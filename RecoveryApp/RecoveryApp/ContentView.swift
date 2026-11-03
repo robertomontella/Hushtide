@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  RecoveryApp
-//
-//  Created by AFP FED 019 on 28/10/2026.
-//
-
 import SwiftUI
 
 public struct ContentView: View {
@@ -38,6 +31,8 @@ public struct ContentView: View {
         .tint(.blue)
         .fullScreenCover(isPresented: $viewModel.isProfilePresented) {
             ProfileView(viewModel: viewModel)
+                .environment(\.appHighContrast, viewModel.isHighContrastEnabled)
+                .environment(\.appReduceMotion, viewModel.isReduceMotionEnabled)
         }
         // MARK: - Global Accessibility Enforcers
         // 1. Reduce Motion: Disables spring animations app-wide when enabled
@@ -49,12 +44,17 @@ public struct ContentView: View {
         }
         // 2. High Contrast Environment Key
         .environment(\.appHighContrast, viewModel.isHighContrastEnabled)
+        .environment(\.appReduceMotion, viewModel.isReduceMotionEnabled)
         // MARK: - Apple Health Sync
         .task {
+            viewModel.sleepModel.checkAndPerformDailyResetIfNeeded()
             await viewModel.startHealthSync()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                // Check daily reset for sleep checkmarks
+                viewModel.sleepModel.checkAndPerformDailyResetIfNeeded()
+                
                 // If user has actively authenticated and connected Apple Health, refresh data in background
                 if viewModel.isAppleHealthSynced && viewModel.isAppleHealthConnected {
                     Task { await viewModel.syncHealthData(requireAuthentication: false) }
@@ -69,10 +69,19 @@ private struct AppHighContrastKey: EnvironmentKey {
     static let defaultValue: Bool = false
 }
 
+private struct AppReduceMotionKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
 extension EnvironmentValues {
     public var appHighContrast: Bool {
         get { self[AppHighContrastKey.self] }
         set { self[AppHighContrastKey.self] = newValue }
+    }
+    
+    public var appReduceMotion: Bool {
+        get { self[AppReduceMotionKey.self] }
+        set { self[AppReduceMotionKey.self] = newValue }
     }
 }
 

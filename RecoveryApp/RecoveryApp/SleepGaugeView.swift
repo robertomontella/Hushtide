@@ -1,13 +1,8 @@
-//
-//  SleepGaugeView.swift
-//  RecoveryApp
-//
-//  Created by Antigravity on 30/10/2026.
-//
-
 import SwiftUI
 
 public struct SleepGaugeView: View {
+    @Environment(\.appHighContrast) private var appHighContrast
+    @Environment(\.appReduceMotion) private var appReduceMotion
     public let progress: Double
     public let durationText: String
     public let targetText: String
@@ -29,10 +24,12 @@ public struct SleepGaugeView: View {
     }
     
     public var body: some View {
-        ZStack {
+        let strokeW: CGFloat = appHighContrast ? 18 : 15
+        
+        return ZStack {
             // Background Inactive Track
             Circle()
-                .stroke(trackColor, lineWidth: 15)
+                .stroke(appHighContrast ? trackColor.opacity(0.8) : trackColor, lineWidth: strokeW)
             
             // Foreground Active Progress Arc (only drawn when progress > 0)
             if progress > 0.001 {
@@ -40,24 +37,24 @@ public struct SleepGaugeView: View {
                     .trim(from: 0.0, to: CGFloat(max(0.0, min(1.0, progress))))
                     .stroke(
                         accentColor,
-                        style: StrokeStyle(lineWidth: 15, lineCap: .round)
+                        style: StrokeStyle(lineWidth: strokeW, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring(response: 0.6, dampingFraction: 0.78), value: progress)
+                    .animation(appReduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.78), value: progress)
             }
             
             // Central Metrics Text
             VStack(spacing: 4) {
                 Text(durationText)
-                    .font(.system(size: 27, weight: .bold))
+                    .font(.system(size: 27, weight: appHighContrast ? .black : .bold))
                     .foregroundColor(.primary)
                     .contentTransition(.numericText())
-                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: durationText)
+                    .animation(appReduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: durationText)
                 
                 // Sleep Goal Target (Read-only static label)
                 Text(targetText)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13, weight: appHighContrast ? .bold : .regular))
+                    .foregroundColor(appHighContrast ? .primary : .secondary)
             }
         }
         .frame(width: 154, height: 154)

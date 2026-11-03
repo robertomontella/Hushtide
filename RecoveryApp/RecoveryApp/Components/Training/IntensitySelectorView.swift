@@ -1,10 +1,3 @@
-//
-//  IntensitySelectorView.swift
-//  WorkoutRecoveryApp
-//
-//  Created by Senior iOS Developer on 29/10/2026.
-//
-
 import SwiftUI
 
 public struct IntensitySelectorView: View {

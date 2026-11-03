@@ -1,10 +1,3 @@
-//
-//  AboutDevelopersView.swift
-//  RecoveryApp
-//
-//  Informational view showcasing the Italian development team and RecoveryApp vision.
-//
-
 import SwiftUI
 
 public struct AboutDevelopersView: View {
@@ -14,37 +7,37 @@ public struct AboutDevelopersView: View {
     private let developers: [DeveloperProfile] = [
         DeveloperProfile(
             name: "Francesco Micallo",
-            role: "iOS Developer & Recovery Architect",
+            role: "IOS Developer",
             initials: "FM",
             accentColor: Color.blue
         ),
         DeveloperProfile(
             name: "Roberto Montella",
-            role: "iOS Developer & HealthKit Integration",
+            role: "IOS Developer ",
             initials: "RM",
             accentColor: Color.indigo
         ),
         DeveloperProfile(
             name: "Gianmarco Ravo",
-            role: "UI/UX Designer & iOS Engineer",
+            role: "UI/UX Designer",
             initials: "GR",
             accentColor: Color.teal
         ),
         DeveloperProfile(
             name: "Francesco Langella",
-            role: "iOS Developer & Metrics Specialist",
+            role: "iOS Developer",
             initials: "FL",
             accentColor: Color.purple
         ),
         DeveloperProfile(
             name: "Daniele Mammola",
-            role: "iOS Developer & Algorithm Engineer",
+            role: "iOS Developer",
             initials: "DM",
             accentColor: Color.orange
         ),
         DeveloperProfile(
             name: "Giuseppe Teodorici",
-            role: "iOS Developer & Quality Assurance",
+            role: "UI/UX Designer",
             initials: "GT",
             accentColor: Color.green
         )

@@ -190,10 +190,8 @@ public struct AddWorkoutView: View {
                         let isSelected = (selectedSport == sport.name)
                         
                         Button {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.prepare()
-                            generator.impactOccurred()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            HapticManager.impact(.light)
+                            withAppAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                 selectedSport = sport.name
                             }
                         } label: {
@@ -246,10 +244,8 @@ public struct AddWorkoutView: View {
                     let isSelected = (selectedIntensity == level)
                     
                     Button {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.prepare()
-                        generator.impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        HapticManager.impact(.light)
+                        withAppAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                             selectedIntensity = level
                         }
                     } label: {
@@ -370,9 +366,7 @@ public struct AddWorkoutView: View {
             .overlay(alignment: .trailing) {
                 if isNotesFocused {
                     Button {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.prepare()
-                        generator.impactOccurred()
+                        HapticManager.impact(.light)
                         isNotesFocused = false
                     } label: {
                         Text("Done")

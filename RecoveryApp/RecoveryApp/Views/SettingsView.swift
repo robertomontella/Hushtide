@@ -1,11 +1,3 @@
-//
-//  SettingsView.swift
-//  RecoveryApp
-//
-//  Main Settings view: Includes sections for Privacy & GDPR,
-//  Accessibility, and About the Developers.
-//
-
 import SwiftUI
 
 public struct SettingsView: View {
@@ -197,14 +189,12 @@ public struct SettingsView: View {
     private var madeInItalyFooter: some View {
         VStack(spacing: 8) {
             HStack(spacing: 6) {
-                Text("🇮🇹")
-                    .font(.system(size: 14))
-                Text("Made with passion in Italy")
+                Text("Made with passion in Italy 🇮🇹")
                     .font(.system(size: 12.5, weight: .semibold))
                     .foregroundColor(.secondary)
             }
             
-            Text("RecoveryApp v1.0 • All calculations performed locally on-device")
+            Text("Hushtide v1.0 • All calculations performed locally on-device")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundColor(Color(uiColor: .tertiaryLabel))
         }
