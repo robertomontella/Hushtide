@@ -205,8 +205,10 @@ public struct SleepView: View {
     private func loadSleepFromHealth() async {
         guard viewModel.isAppleHealthConnected else { return }
         sleepModel.selectDay(at: calendarModel.selectedDayIndex)
-        if let night = try? await viewModel.health.fetchSleepNight(endingOn: calendarModel.selectedDate) {
-            sleepModel.apply(night: night)
+        if !sleepModel.isSelectedDayManualSchedule {
+            if let night = try? await viewModel.health.fetchSleepNight(endingOn: calendarModel.selectedDate) {
+                sleepModel.apply(night: night)
+            }
         }
         viewModel.evaluateRecovery()
     }
@@ -412,9 +414,20 @@ public struct SleepView: View {
         let calendar = Calendar.current
         var components = calendar.dateComponents([.year, .month, .day], from: Date())
         
-        let hour12 = (type == .inBed) ? sleepModel.inBedHour : sleepModel.asleepHour
+        var hour12 = (type == .inBed) ? sleepModel.inBedHour : sleepModel.asleepHour
         let minute = (type == .inBed) ? sleepModel.inBedMinute : sleepModel.asleepMinute
-        let period = (type == .inBed) ? sleepModel.inBedPeriod : sleepModel.asleepPeriod
+        var period = (type == .inBed) ? sleepModel.inBedPeriod : sleepModel.asleepPeriod
+        
+        // Provide sensible defaults if uninitialized
+        if hour12 == 0 {
+            if type == .inBed {
+                hour12 = 10
+                period = .pm
+            } else {
+                hour12 = 7
+                period = .am
+            }
+        }
         
         var hour24 = hour12 % 12
         if period == .pm {
@@ -479,6 +492,7 @@ public struct SleepView: View {
             } else {
                 sleepModel.setAsleep(hour: hour12, minute: minute, period: period)
             }
+            viewModel.evaluateRecovery()
         }
         
         HapticManager.notification(.success)

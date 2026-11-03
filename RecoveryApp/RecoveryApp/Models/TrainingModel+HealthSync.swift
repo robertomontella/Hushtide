@@ -232,6 +232,14 @@ extension TrainingModel {
                 if offset < updatedQualityBars.count { updatedQualityBars[offset] = 0 }
                 continue
             }
+            
+            // If the user manually edited or scheduled this day, preserve custom schedule and duration
+            if offset < sleepModel.weeklyRecords.count && sleepModel.weeklyRecords[offset].isManualSchedule {
+                if offset < updatedWeeklySleep.count {
+                    updatedWeeklySleep[offset] = sleepModel.weeklySleepMinutes[offset]
+                }
+                continue
+            }
             if let night = nights[startOfD], night.asleepMinutes > 0 {
                 if offset < updatedWeeklySleep.count {
                     updatedWeeklySleep[offset] = night.asleepMinutes

@@ -46,6 +46,7 @@ public struct DaySleepRecord: Hashable, Codable {
     public var asleepPeriod: MeridiemPeriod
     public var checkmarks: [SleepCheckmarkItem]
     public var healthAsleepMinutes: Int? = nil
+    public var isManualSchedule: Bool = false
     
     public init(
         inBedHour: Int,
@@ -55,7 +56,8 @@ public struct DaySleepRecord: Hashable, Codable {
         asleepMinute: Int,
         asleepPeriod: MeridiemPeriod,
         checkmarks: [SleepCheckmarkItem],
-        healthAsleepMinutes: Int? = nil
+        healthAsleepMinutes: Int? = nil,
+        isManualSchedule: Bool = false
     ) {
         self.inBedHour = inBedHour
         self.inBedMinute = inBedMinute
@@ -65,6 +67,24 @@ public struct DaySleepRecord: Hashable, Codable {
         self.asleepPeriod = asleepPeriod
         self.checkmarks = checkmarks
         self.healthAsleepMinutes = healthAsleepMinutes
+        self.isManualSchedule = isManualSchedule
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case inBedHour, inBedMinute, inBedPeriod, asleepHour, asleepMinute, asleepPeriod, checkmarks, healthAsleepMinutes, isManualSchedule
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.inBedHour = try container.decode(Int.self, forKey: .inBedHour)
+        self.inBedMinute = try container.decode(Int.self, forKey: .inBedMinute)
+        self.inBedPeriod = try container.decode(MeridiemPeriod.self, forKey: .inBedPeriod)
+        self.asleepHour = try container.decode(Int.self, forKey: .asleepHour)
+        self.asleepMinute = try container.decode(Int.self, forKey: .asleepMinute)
+        self.asleepPeriod = try container.decode(MeridiemPeriod.self, forKey: .asleepPeriod)
+        self.checkmarks = try container.decode([SleepCheckmarkItem].self, forKey: .checkmarks)
+        self.healthAsleepMinutes = try container.decodeIfPresent(Int.self, forKey: .healthAsleepMinutes)
+        self.isManualSchedule = try container.decodeIfPresent(Bool.self, forKey: .isManualSchedule) ?? false
     }
 }
 
@@ -102,6 +122,11 @@ public final class SleepModel {
     
     public var isSelectedDayInFuture: Bool {
         isDayIndexInFuture(selectedDayIndex)
+    }
+    
+    public var isSelectedDayManualSchedule: Bool {
+        guard selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count else { return false }
+        return weeklyRecords[selectedDayIndex].isManualSchedule
     }
     
     // Accent Color: royal indigo (#535DFF) matching design mockup
@@ -279,16 +304,34 @@ public final class SleepModel {
     // MARK: - Dynamic Sleep Duration Calculations
     public var durationMinutes: Int {
         if isSelectedDayInFuture || !isAppleHealthSynced { return 0 }
+        
+        // If the user manually edited this day's schedule, calculate duration directly from bedtime & wake time
+        if selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count && weeklyRecords[selectedDayIndex].isManualSchedule {
+            guard inBedHour > 0 || asleepHour > 0 else { return 0 }
+            let bedMins = toMinutesFromMidnight(hour: inBedHour, minute: inBedMinute, period: inBedPeriod)
+            let wakeMins = toMinutesFromMidnight(hour: asleepHour, minute: asleepMinute, period: asleepPeriod)
+            if wakeMins >= bedMins {
+                return wakeMins - bedMins
+            } else {
+                return (24 * 60 - bedMins) + wakeMins
+            }
+        }
+        
+        // Untouched Apple Health measured sleep stage minutes (asleep time)
         if let healthAsleepMinutes, healthAsleepMinutes > 0 { return healthAsleepMinutes }
         if selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count,
            let recordMins = weeklyRecords[selectedDayIndex].healthAsleepMinutes, recordMins > 0 {
             return recordMins
         }
-        if selectedDayIndex >= 0 && selectedDayIndex < weeklySleepMinutes.count,
-           weeklySleepMinutes[selectedDayIndex] > 0 {
-            return weeklySleepMinutes[selectedDayIndex]
+        
+        // Bedtime & wake time schedule calculation
+        guard inBedHour > 0 || asleepHour > 0 else {
+            if selectedDayIndex >= 0 && selectedDayIndex < weeklySleepMinutes.count,
+               weeklySleepMinutes[selectedDayIndex] > 0 {
+                return weeklySleepMinutes[selectedDayIndex]
+            }
+            return 0
         }
-        guard inBedHour > 0 || asleepHour > 0 else { return 0 }
         let bedMins = toMinutesFromMidnight(hour: inBedHour, minute: inBedMinute, period: inBedPeriod)
         let wakeMins = toMinutesFromMidnight(hour: asleepHour, minute: asleepMinute, period: asleepPeriod)
         
@@ -464,8 +507,13 @@ public final class SleepModel {
         inBedHour = max(1, min(12, hour))
         inBedMinute = max(0, min(59, minute))
         inBedPeriod = period
+        if asleepHour == 0 {
+            asleepHour = 7
+            asleepMinute = 0
+            asleepPeriod = .am
+        }
         updateBedtimeCheckmarkCompliance()
-        syncCurrentToRecord()
+        syncCurrentToRecord(manual: true)
         onStateChanged?()
     }
     
@@ -474,7 +522,12 @@ public final class SleepModel {
         asleepHour = max(1, min(12, hour))
         asleepMinute = max(0, min(59, minute))
         asleepPeriod = period
-        syncCurrentToRecord()
+        if inBedHour == 0 {
+            inBedHour = 10
+            inBedMinute = 0
+            inBedPeriod = .pm
+        }
+        syncCurrentToRecord(manual: true)
         onStateChanged?()
     }
     
@@ -484,8 +537,9 @@ public final class SleepModel {
         
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             inBedPeriod = period
+            healthAsleepMinutes = nil
             updateBedtimeCheckmarkCompliance()
-            syncCurrentToRecord()
+            syncCurrentToRecord(manual: true)
         }
         onStateChanged?()
     }
@@ -496,7 +550,8 @@ public final class SleepModel {
         
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             asleepPeriod = period
-            syncCurrentToRecord()
+            healthAsleepMinutes = nil
+            syncCurrentToRecord(manual: true)
         }
         onStateChanged?()
     }
@@ -585,10 +640,10 @@ public final class SleepModel {
         asleepMinute = record.asleepMinute
         asleepPeriod = record.asleepPeriod
         checkmarks = record.checkmarks
-        healthAsleepMinutes = record.healthAsleepMinutes ?? (weeklySleepMinutes[index] > 0 ? weeklySleepMinutes[index] : nil)
+        healthAsleepMinutes = record.isManualSchedule ? nil : record.healthAsleepMinutes
         
         // If times are 0 but we have sleep minutes, construct sensible bedtime & wake-up time
-        if (inBedHour == 0 && asleepHour == 0), let minutes = healthAsleepMinutes, minutes > 0 {
+        if (inBedHour == 0 && asleepHour == 0), let minutes = (healthAsleepMinutes ?? (weeklySleepMinutes[index] > 0 ? weeklySleepMinutes[index] : nil)), minutes > 0 {
             let wakeHour = 7
             let wakeMinute = 0
             let wakeTotal = wakeHour * 60 + wakeMinute
@@ -607,8 +662,9 @@ public final class SleepModel {
         }
     }
     
-    private func syncCurrentToRecord() {
+    private func syncCurrentToRecord(manual: Bool = false) {
         guard selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count else { return }
+        let isManual = manual || weeklyRecords[selectedDayIndex].isManualSchedule
         weeklyRecords[selectedDayIndex] = DaySleepRecord(
             inBedHour: inBedHour,
             inBedMinute: inBedMinute,
@@ -617,7 +673,8 @@ public final class SleepModel {
             asleepMinute: asleepMinute,
             asleepPeriod: asleepPeriod,
             checkmarks: checkmarks,
-            healthAsleepMinutes: healthAsleepMinutes
+            healthAsleepMinutes: isManual ? nil : healthAsleepMinutes,
+            isManualSchedule: isManual
         )
         let mins = durationMinutes
         if selectedDayIndex < weeklySleepMinutes.count {
