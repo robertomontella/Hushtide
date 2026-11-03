@@ -248,6 +248,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hushtide;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Hushtide requires Face ID to authenticate before syncing your Apple Health data.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "RecoveryApp reads your sleep, workouts, heart rate variability and resting heart rate from Apple Health to calculate your daily readiness and recovery.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "RecoveryApp saves the workouts you log in the app to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -284,6 +285,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hushtide;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Hushtide requires Face ID to authenticate before syncing your Apple Health data.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "RecoveryApp reads your sleep, workouts, heart rate variability and resting heart rate from Apple Health to calculate your daily readiness and recovery.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "RecoveryApp saves the workouts you log in the app to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -55,7 +55,10 @@ public struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await viewModel.syncHealthData() }
+                // If user has actively authenticated and connected Apple Health, refresh data in background
+                if viewModel.isAppleHealthSynced && viewModel.isAppleHealthConnected {
+                    Task { await viewModel.syncHealthData(requireAuthentication: false) }
+                }
             }
         }
     }

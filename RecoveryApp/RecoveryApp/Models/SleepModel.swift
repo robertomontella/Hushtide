@@ -22,7 +22,7 @@ public struct SleepCheckmarkItem: Identifiable, Hashable {
     public var title: String
     public var isChecked: Bool
     
-    public init(id: UUID = UUID(), title: String, isChecked: Bool = true) {
+    public init(id: UUID = UUID(), title: String, isChecked: Bool = false) {
         self.id = id
         self.title = title
         self.isChecked = isChecked
@@ -70,6 +70,9 @@ public final class SleepModel {
     
     // MARK: - Shared Calendar Model Reference
     public var calendarModel: CalendarModel? = nil
+    
+    // MARK: - Apple Health Sync State
+    public var isAppleHealthSynced: Bool = false
     
     // MARK: - Theme & Header
     public var title: String = "Sleep"
@@ -122,48 +125,43 @@ public final class SleepModel {
     }
     
     // MARK: - Weekly Sleep Tracking (Current Week: Mon - Sun)
-    public var weeklySleepMinutes: [Int] = [465, 390, 465, 480, 435, 510, 480]
+    // When opened without syncing Apple Health, all values default to zero
+    public var weeklySleepMinutes: [Int] = [0, 0, 0, 0, 0, 0, 0]
     
-    // 7-day individual records for full schedule and checkmark persistence (all checkboxes marked for each day)
+    // 7-day individual records for full schedule and checkmark persistence (all suggested checkmarks unselected)
     public var weeklyRecords: [DaySleepRecord] = [
-        // 0: Monday (7h 45m = 465m)
-        DaySleepRecord(inBedHour: 11, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 45, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
-        // 1: Tuesday (6h 30m = 390m)
-        DaySleepRecord(inBedHour: 11, inBedMinute: 30, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
-        // 2: Wednesday (7h 45m = 465m)
-        DaySleepRecord(inBedHour: 11, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 45, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
-        // 3: Thursday (8h 00m = 480m)
-        DaySleepRecord(inBedHour: 10, inBedMinute: 45, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 45, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
-        // 4: Friday (7h 15m = 435m)
-        DaySleepRecord(inBedHour: 11, inBedMinute: 15, inBedPeriod: .pm, asleepHour: 6, asleepMinute: 30, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
-        // 5: Saturday (8h 30m = 510m)
-        DaySleepRecord(inBedHour: 11, inBedMinute: 30, inBedPeriod: .pm, asleepHour: 8, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ]),
-        // 6: Sunday (8h 00m = 480m)
-        DaySleepRecord(inBedHour: 11, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 7, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
-            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
         ])
     ]
     
     public var currentWeeklySleepMinutes: [Int] {
+        guard isAppleHealthSynced else { return [0, 0, 0, 0, 0, 0, 0] }
         var list = weeklySleepMinutes
         for i in 0..<list.count {
             if isDayIndexInFuture(i) {
@@ -177,6 +175,7 @@ public final class SleepModel {
     }
     
     public var weeklyAverageMinutes: Int {
+        guard isAppleHealthSynced else { return 0 }
         let nonFuture = (0..<currentWeeklySleepMinutes.count).filter { !isDayIndexInFuture($0) }
         guard !nonFuture.isEmpty else { return durationMinutes }
         let sum = nonFuture.map { currentWeeklySleepMinutes[$0] }.reduce(0, +)
@@ -184,46 +183,54 @@ public final class SleepModel {
     }
     
     public var weeklyAverageFormatted: String {
+        guard isAppleHealthSynced && weeklyAverageMinutes > 0 else { return "0h 00m" }
         let h = weeklyAverageMinutes / 60
         let m = weeklyAverageMinutes % 60
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
     
     public var daysMeetingTargetCount: Int {
+        guard isAppleHealthSynced else { return 0 }
         let targetMins = Int(targetSleepHours * 60.0)
+        guard targetMins > 0 else { return 0 }
         let nonFuture = (0..<currentWeeklySleepMinutes.count).filter { !isDayIndexInFuture($0) }
         return nonFuture.filter { currentWeeklySleepMinutes[$0] >= targetMins }.count
     }
     
     public var weeklySleepProgress: Double {
+        guard isAppleHealthSynced && weeklyAverageMinutes > 0 else { return 0.0 }
         let targetMins = targetSleepHours * 60.0
-        guard targetMins > 0 else { return 0 }
-        return min(1.0, max(0.01, Double(weeklyAverageMinutes) / targetMins))
+        guard targetMins > 0 else { return 0.0 }
+        return min(1.0, max(0.0, Double(weeklyAverageMinutes) / targetMins))
     }
     
-    // MARK: - Bedtime & Wakeup Schedule
-    public var inBedHour: Int = 11
+    // MARK: - Bedtime & Wakeup Schedule (Defaults to uninitialized / 0 until synced)
+    public var inBedHour: Int = 0
     public var inBedMinute: Int = 0
     public var inBedPeriod: MeridiemPeriod = .pm
     
-    public var asleepHour: Int = 6
-    public var asleepMinute: Int = 45
+    public var asleepHour: Int = 0
+    public var asleepMinute: Int = 0
     public var asleepPeriod: MeridiemPeriod = .am
     
     public var inBedTimeFormatted: String {
-        String(format: "%d:%02d", inBedHour, inBedMinute)
+        guard inBedHour > 0 || inBedMinute > 0 else { return "--:--" }
+        return String(format: "%d:%02d", inBedHour, inBedMinute)
     }
     
     public var asleepTimeFormatted: String {
-        String(format: "%d:%02d", asleepHour, asleepMinute)
+        guard asleepHour > 0 || asleepMinute > 0 else { return "--:--" }
+        return String(format: "%d:%02d", asleepHour, asleepMinute)
     }
     
     public var inBedFullTimeFormatted: String {
-        "\(inBedTimeFormatted) \(inBedPeriod.rawValue)"
+        guard inBedHour > 0 || inBedMinute > 0 else { return "--:--" }
+        return "\(inBedTimeFormatted) \(inBedPeriod.rawValue)"
     }
     
     public var asleepFullTimeFormatted: String {
-        "\(asleepTimeFormatted) \(asleepPeriod.rawValue)"
+        guard asleepHour > 0 || asleepMinute > 0 else { return "--:--" }
+        return "\(asleepTimeFormatted) \(asleepPeriod.rawValue)"
     }
     
     // MARK: - Apple Health Data
@@ -266,8 +273,9 @@ public final class SleepModel {
     
     // MARK: - Dynamic Sleep Duration Calculations
     public var durationMinutes: Int {
-        if isSelectedDayInFuture { return 0 }
+        if isSelectedDayInFuture || !isAppleHealthSynced { return 0 }
         if let healthAsleepMinutes { return healthAsleepMinutes }
+        guard inBedHour > 0 || asleepHour > 0 else { return 0 }
         let bedMins = toMinutesFromMidnight(hour: inBedHour, minute: inBedMinute, period: inBedPeriod)
         let wakeMins = toMinutesFromMidnight(hour: asleepHour, minute: asleepMinute, period: asleepPeriod)
         
@@ -298,20 +306,49 @@ public final class SleepModel {
     
     /// Visual fraction of the ring (0.0 ... 1.0) proportional to user target sleep
     public var ringProgress: Double {
-        guard durationMinutes > 0 else { return 0.0 }
+        guard isAppleHealthSynced && durationMinutes > 0 else { return 0.0 }
         let targetMins = targetSleepHours * 60.0
         guard targetMins > 0 else { return 0.0 }
-        return min(1.0, max(0.01, Double(durationMinutes) / targetMins))
+        return min(1.0, max(0.0, Double(durationMinutes) / targetMins))
     }
     
-    // MARK: - Recommendations & Checkmarks
+    // MARK: - Recommendations & Checkmarks (Suggested checkboxes are NOT selected by default)
     public var checkmarksSectionTitle: String = "Checkmarks"
     public var checkmarksSubtitle: String = "Based on your weekly workouts and daily routine, we recommend that you:"
     
     public var checkmarks: [SleepCheckmarkItem] = [
-        SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: true),
-        SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: true)
+        SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+        SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
     ]
+    
+    // MARK: - Reset to Zero State
+    public func resetToZero() {
+        isAppleHealthSynced = false
+        healthAsleepMinutes = nil
+        weeklySleepMinutes = [0, 0, 0, 0, 0, 0, 0]
+        inBedHour = 0
+        inBedMinute = 0
+        asleepHour = 0
+        asleepMinute = 0
+        checkmarks = [
+            SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+            SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
+        ]
+        weeklyRecords = (0..<7).map { _ in
+            DaySleepRecord(
+                inBedHour: 0,
+                inBedMinute: 0,
+                inBedPeriod: .pm,
+                asleepHour: 0,
+                asleepMinute: 0,
+                asleepPeriod: .am,
+                checkmarks: [
+                    SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
+                    SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false)
+                ]
+            )
+        }
+    }
     
     // MARK: - Initializer
     public init() {}

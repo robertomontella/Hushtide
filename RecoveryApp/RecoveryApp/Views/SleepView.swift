@@ -135,6 +135,9 @@ public struct SleepView: View {
                 .padding(.top, 4)
             }
             .scrollBounceBehavior(.always, axes: .vertical)
+            .refreshable {
+                await viewModel.syncHealthData(requireAuthentication: true)
+            }
             
             // MARK: - Top-Down Drop-Down Calendar (Slides from Top to Bottom)
             if isCalendarOpen {

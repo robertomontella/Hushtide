@@ -375,7 +375,7 @@ public struct ProfileView: View {
                     generator.prepare()
                     generator.impactOccurred()
                     Task {
-                        await viewModel.syncHealthData()
+                        await viewModel.syncHealthData(requireAuthentication: true)
                     }
                 } label: {
                     HStack(spacing: 10) {

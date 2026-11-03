@@ -34,15 +34,17 @@ public struct SleepGaugeView: View {
             Circle()
                 .stroke(trackColor, lineWidth: 15)
             
-            // Foreground Active Progress Arc
-            Circle()
-                .trim(from: 0.0, to: CGFloat(max(0.0, min(1.0, progress))))
-                .stroke(
-                    accentColor,
-                    style: StrokeStyle(lineWidth: 15, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .animation(.spring(response: 0.6, dampingFraction: 0.78), value: progress)
+            // Foreground Active Progress Arc (only drawn when progress > 0)
+            if progress > 0.001 {
+                Circle()
+                    .trim(from: 0.0, to: CGFloat(max(0.0, min(1.0, progress))))
+                    .stroke(
+                        accentColor,
+                        style: StrokeStyle(lineWidth: 15, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(response: 0.6, dampingFraction: 0.78), value: progress)
+            }
             
             // Central Metrics Text
             VStack(spacing: 4) {

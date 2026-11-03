@@ -97,16 +97,18 @@ public struct SummaryRingsView: View {
                 .stroke(trackColor, lineWidth: strokeWidth)
                 .frame(width: diameter, height: diameter)
             
-            // Active progress arc with clean rounded caps on both ends
-            Circle()
-                .trim(from: 0.0, to: min(max(progress, 0.0), 1.0))
-                .stroke(
-                    activeColor,
-                    style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
-                )
-                .frame(width: diameter, height: diameter)
-                .rotationEffect(.degrees(rotationDegrees))
-                .animation(.spring(response: 0.55, dampingFraction: 0.8), value: progress)
+            // Active progress arc with clean rounded caps on both ends (only drawn when progress > 0)
+            if progress > 0.001 {
+                Circle()
+                    .trim(from: 0.0, to: min(max(progress, 0.0), 1.0))
+                    .stroke(
+                        activeColor,
+                        style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
+                    )
+                    .frame(width: diameter, height: diameter)
+                    .rotationEffect(.degrees(rotationDegrees))
+                    .animation(.spring(response: 0.55, dampingFraction: 0.8), value: progress)
+            }
         }
     }
 }

@@ -64,15 +64,17 @@ public struct ReadinessRingView: View {
                     style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
                 )
             
-            // Active Dynamic Track (Animated with spring)
-            ReadinessArcShape(strokeWidth: strokeWidth)
-                .trim(from: 0.0, to: CGFloat(progress))
-                .stroke(
-                    dynamicColor,
-                    style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
-                )
-                .animation(.spring(response: 0.55, dampingFraction: 0.8), value: score)
-                .animation(.easeInOut(duration: 0.25), value: dynamicColor)
+            // Active Dynamic Track (Animated with spring, only drawn when score > 0)
+            if progress > 0.001 {
+                ReadinessArcShape(strokeWidth: strokeWidth)
+                    .trim(from: 0.0, to: CGFloat(progress))
+                    .stroke(
+                        dynamicColor,
+                        style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
+                    )
+                    .animation(.spring(response: 0.55, dampingFraction: 0.8), value: score)
+                    .animation(.easeInOut(duration: 0.25), value: dynamicColor)
+            }
                 
             
             // Numerical Score and READINESS Label nested in the arch
