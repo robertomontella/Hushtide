@@ -1,0 +1,278 @@
+//
+//  AboutDevelopersView.swift
+//  RecoveryApp
+//
+//  Informational view showcasing the Italian development team and RecoveryApp vision.
+//
+
+import SwiftUI
+
+public struct AboutDevelopersView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    
+    // The 6 developers specified by the user
+    private let developers: [DeveloperProfile] = [
+        DeveloperProfile(
+            name: "Francesco Micallo",
+            role: "iOS Developer & Recovery Architect",
+            initials: "FM",
+            accentColor: Color.blue
+        ),
+        DeveloperProfile(
+            name: "Roberto Montella",
+            role: "iOS Developer & HealthKit Integration",
+            initials: "RM",
+            accentColor: Color.indigo
+        ),
+        DeveloperProfile(
+            name: "Gianmarco Ravo",
+            role: "UI/UX Designer & iOS Engineer",
+            initials: "GR",
+            accentColor: Color.teal
+        ),
+        DeveloperProfile(
+            name: "Francesco Langella",
+            role: "iOS Developer & Metrics Specialist",
+            initials: "FL",
+            accentColor: Color.purple
+        ),
+        DeveloperProfile(
+            name: "Daniele Mammola",
+            role: "iOS Developer & Algorithm Engineer",
+            initials: "DM",
+            accentColor: Color.orange
+        ),
+        DeveloperProfile(
+            name: "Giuseppe Teodorici",
+            role: "iOS Developer & Quality Assurance",
+            initials: "GT",
+            accentColor: Color.green
+        )
+    ]
+    
+    public init() {}
+    
+    public var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 20) {
+                // MARK: - Hero Banner (Made in Italy)
+                appHeroSection
+                
+                // MARK: - Section: THE DEVELOPMENT TEAM
+                developersSection
+                
+                // MARK: - Mission & Italian Heritage
+                heritageSection
+                
+                // MARK: - Technical & Build Info
+                buildInfoSection
+                
+                Spacer().frame(height: 30)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+        }
+        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("About Us")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    // MARK: - App Hero Section
+    private var appHeroSection: some View {
+        VStack(spacing: 14) {
+            // Italian Flag Badge
+            HStack(spacing: 6) {
+                Text("🇮🇹")
+                    .font(.system(size: 16))
+                
+                Text("DEVELOPED IN ITALY")
+                    .font(.system(size: 11.5, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundColor(.primary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
+                    )
+            )
+            
+            // App Icon Graphic
+            ZStack {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.05, green: 0.50, blue: 1.0),
+                                Color(red: 0.20, green: 0.30, blue: 0.95)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 76, height: 76)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 12, x: 0, y: 6)
+                
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            
+            VStack(spacing: 4) {
+                Text("RecoveryApp")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Text("Version 1.0 (Build 1)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            
+            Text("Designed for athletes and fitness enthusiasts seeking to master the balance between restorative sleep, accumulated sleep debt, and training load.")
+                .font(.system(size: 13.5, weight: .regular))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
+                .lineSpacing(2)
+        }
+        .padding(.vertical, 22)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    // MARK: - Developers Section
+    private var developersSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("THE DEVELOPMENT TEAM")
+                    .font(.system(size: 12.5, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text("\(developers.count) Developers")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 4)
+            
+            VStack(spacing: 0) {
+                ForEach(Array(developers.enumerated()), id: \.element.id) { index, dev in
+                    developerRow(developer: dev)
+                    
+                    if index < developers.count - 1 {
+                        Divider()
+                            .padding(.leading, 68)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private func developerRow(developer: DeveloperProfile) -> some View {
+        HStack(spacing: 14) {
+            // Vibrant Initials Avatar
+            ZStack {
+                Circle()
+                    .fill(developer.accentColor.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                
+                Text(developer.initials)
+                    .font(.system(size: 15.5, weight: .bold, design: .rounded))
+                    .foregroundColor(developer.accentColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text(developer.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Text(developer.role)
+                    .font(.system(size: 12.5, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+    
+    // MARK: - Heritage & Philosophy
+    private var heritageSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("MISSION & ROOTS")
+                .font(.system(size: 12.5, weight: .bold))
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 4)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.blue)
+                    
+                    Text("Italian Digital Excellence")
+                        .font(.system(size: 15.5, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                
+                Text("RecoveryApp was born in Italy through the union of iOS software engineering, human-centered design, and sports science. Our mission is to translate complex biometric data from Apple Health into actionable, immediate, and privacy-first daily recovery insights.")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .lineSpacing(2.5)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            )
+        }
+    }
+    
+    // MARK: - Build Info Section
+    private var buildInfoSection: some View {
+        VStack(spacing: 6) {
+            Text("Crafted with Swift and SwiftUI in Italy 🇮🇹")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+            
+            Text("© 2026 RecoveryApp Team. All rights reserved.")
+                .font(.system(size: 11, weight: .regular))
+                .foregroundColor(Color(uiColor: .tertiaryLabel))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+    }
+}
+
+// MARK: - Developer Profile Model
+private struct DeveloperProfile: Identifiable {
+    let id = UUID()
+    let name: String
+    let role: String
+    let initials: String
+    let accentColor: Color
+}
+
+#Preview {
+    NavigationStack {
+        AboutDevelopersView()
+    }
+}
