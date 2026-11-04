@@ -64,7 +64,7 @@ public struct AccessibilitySettingsView: View {
                     .multilineTextAlignment(.center)
             }
             
-            Text("RecoveryApp is designed to ensure maximum legibility, seamless VoiceOver navigation, and optimal comfort for every athlete and user.")
+            Text("Hushtide is designed to ensure maximum legibility, seamless VoiceOver navigation, and optimal comfort for every athlete and user.")
                 .font(.system(size: 13.5, weight: .regular))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -335,7 +335,7 @@ public struct AccessibilitySettingsView: View {
                             .font(.system(size: 15.5, weight: .medium))
                             .foregroundColor(.primary)
                         
-                        Text("RecoveryApp automatically scales fonts to respect your system settings in iOS Settings > Display & Brightness > Text Size.")
+                        Text("Hushtide automatically scales fonts to respect your system settings in iOS Settings > Display & Brightness > Text Size.")
                             .font(.system(size: 12.5, weight: .regular))
                             .foregroundColor(.secondary)
                             .lineSpacing(2)

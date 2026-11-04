@@ -481,7 +481,7 @@ public struct ProfileView: View {
                         }
                         .padding(.top, 6)
                         
-                        Text("“RecoveryApp” would like to access and update your Health data in order to calculate your daily readiness and sync workouts.")
+                        Text("“Hushtide” would like to access and update your Health data in order to calculate your daily readiness and sync workouts.")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)

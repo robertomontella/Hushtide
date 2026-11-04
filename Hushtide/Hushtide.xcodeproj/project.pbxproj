@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		18A0F1753092554300DFC517 /* RecoveryApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecoveryApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		18A0F1753092554300DFC517 /* Hushtide.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hushtide.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		18A0F1773092554300DFC517 /* RecoveryApp */ = {
+		18A0F1773092554300DFC517 /* Hushtide */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = RecoveryApp;
+			path = Hushtide;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -30,7 +30,7 @@
 		18A0F16C3092554300DFC517 = {
 			isa = PBXGroup;
 			children = (
-				18A0F1773092554300DFC517 /* RecoveryApp */,
+				18A0F1773092554300DFC517 /* Hushtide */,
 				18A0F1763092554300DFC517 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -38,7 +38,7 @@
 		18A0F1763092554300DFC517 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				18A0F1753092554300DFC517 /* RecoveryApp.app */,
+				18A0F1753092554300DFC517 /* Hushtide.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -46,9 +46,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		18A0F1743092554300DFC517 /* RecoveryApp */ = {
+		18A0F1743092554300DFC517 /* Hushtide */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 18A0F1803092554400DFC517 /* Build configuration list for PBXNativeTarget "RecoveryApp" */;
+			buildConfigurationList = 18A0F1803092554400DFC517 /* Build configuration list for PBXNativeTarget "Hushtide" */;
 			buildPhases = (
 				18A0F1713092554300DFC517 /* Sources */,
 				18A0F1723092554300DFC517 /* Frameworks */,
@@ -57,11 +57,11 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
-				18A0F1773092554300DFC517 /* RecoveryApp */,
+				18A0F1773092554300DFC517 /* Hushtide */,
 			);
-			name = RecoveryApp;
-			productName = RecoveryApp;
-			productReference = 18A0F1753092554300DFC517 /* RecoveryApp.app */;
+			name = Hushtide;
+			productName = Hushtide;
+			productReference = 18A0F1753092554300DFC517 /* Hushtide.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -79,7 +79,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 18A0F1703092554300DFC517 /* Build configuration list for PBXProject "RecoveryApp" */;
+			buildConfigurationList = 18A0F1703092554300DFC517 /* Build configuration list for PBXProject "Hushtide" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -93,7 +93,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				18A0F1743092554300DFC517 /* RecoveryApp */,
+				18A0F1743092554300DFC517 /* Hushtide */,
 			);
 		};
 /* End PBXProject section */
@@ -115,7 +115,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		18A0F17E3092554400DFC517 /* Debug configuration for PBXProject "RecoveryApp" */ = {
+		18A0F17E3092554400DFC517 /* Debug configuration for PBXProject "Hushtide" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -179,7 +179,7 @@
 			};
 			name = Debug;
 		};
-		18A0F17F3092554400DFC517 /* Release configuration for PBXProject "RecoveryApp" */ = {
+		18A0F17F3092554400DFC517 /* Release configuration for PBXProject "Hushtide" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -236,12 +236,12 @@
 			};
 			name = Release;
 		};
-		18A0F1813092554400DFC517 /* Debug configuration for PBXNativeTarget "RecoveryApp" */ = {
+		18A0F1813092554400DFC517 /* Debug configuration for PBXNativeTarget "Hushtide" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = RecoveryApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Hushtide.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9HWYXWWHM4;
@@ -261,7 +261,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.francescomicallo.RecoveryApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.francescomicallo.Hushtide;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -277,12 +277,12 @@
 			};
 			name = Debug;
 		};
-		18A0F1823092554400DFC517 /* Release configuration for PBXNativeTarget "RecoveryApp" */ = {
+		18A0F1823092554400DFC517 /* Release configuration for PBXNativeTarget "Hushtide" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = RecoveryApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Hushtide.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9HWYXWWHM4;
@@ -302,7 +302,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.francescomicallo.RecoveryApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.francescomicallo.Hushtide;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -321,19 +321,19 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		18A0F1703092554300DFC517 /* Build configuration list for PBXProject "RecoveryApp" */ = {
+		18A0F1703092554300DFC517 /* Build configuration list for PBXProject "Hushtide" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				18A0F17E3092554400DFC517 /* Debug configuration for PBXProject "RecoveryApp" */,
-				18A0F17F3092554400DFC517 /* Release configuration for PBXProject "RecoveryApp" */,
+				18A0F17E3092554400DFC517 /* Debug configuration for PBXProject "Hushtide" */,
+				18A0F17F3092554400DFC517 /* Release configuration for PBXProject "Hushtide" */,
 			);
 			defaultConfigurationName = Release;
 		};
-		18A0F1803092554400DFC517 /* Build configuration list for PBXNativeTarget "RecoveryApp" */ = {
+		18A0F1803092554400DFC517 /* Build configuration list for PBXNativeTarget "Hushtide" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				18A0F1813092554400DFC517 /* Debug configuration for PBXNativeTarget "RecoveryApp" */,
-				18A0F1823092554400DFC517 /* Release configuration for PBXNativeTarget "RecoveryApp" */,
+				18A0F1813092554400DFC517 /* Debug configuration for PBXNativeTarget "Hushtide" */,
+				18A0F1823092554400DFC517 /* Release configuration for PBXNativeTarget "Hushtide" */,
 			);
 			defaultConfigurationName = Release;
 		};
