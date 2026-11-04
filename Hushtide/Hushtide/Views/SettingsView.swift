@@ -2,9 +2,6 @@ import SwiftUI
 
 public enum AppSettingsKey {
     public static let isHapticsEnabled = "RecoveryApp_isHapticsEnabled"
-    public static let isAudioCuesEnabled = "Hushtide_isAudioCuesEnabled"
-    public static let simplifyCharts = "Hushtide_simplifyCharts"
-    public static let isManualInputModeEnabled = "Hushtide_isManualInputModeEnabled"
 }
 
 public struct SettingsView: View {
@@ -14,15 +11,6 @@ public struct SettingsView: View {
     @AppStorage(AppSettingsKey.isHapticsEnabled)
     private var isHapticsEnabled: Bool = true
     
-    @AppStorage(AppSettingsKey.isAudioCuesEnabled)
-    private var isAudioCuesEnabled: Bool = true
-    
-    @AppStorage(AppSettingsKey.simplifyCharts)
-    private var simplifyCharts: Bool = false
-    
-    @AppStorage(AppSettingsKey.isManualInputModeEnabled)
-    private var isManualInputModeEnabled: Bool = false
-    
     public init(viewModel: TrainingModel? = nil) {
         self.viewModel = viewModel
     }
@@ -30,8 +18,6 @@ public struct SettingsView: View {
     public var body: some View {
         Form {
             sensoryFeedbackSection
-            dataVisualizationSection
-            inputFallbackSection
             
             if let viewModel = viewModel {
                 systemIntegrationSection(viewModel: viewModel)
@@ -62,61 +48,10 @@ public struct SettingsView: View {
             }
             .accessibilityLabel("Haptic Feedback")
             .accessibilityHint("Enables or disables tactile vibration responses inside the app.")
-            
-            Toggle(isOn: $isAudioCuesEnabled) {
-                settingsRowLabel(
-                    icon: "speaker.wave.2.fill",
-                    iconColor: .teal,
-                    title: "Audio Cues & Sounds",
-                    subtitle: "Auditory guidance, countdown tones, and tracking alerts during sessions"
-                )
-            }
-            .accessibilityLabel("Audio Cues and Sounds")
-            .accessibilityHint("Plays auditory prompts and milestone tones during tracking sessions.")
         } header: {
             Text("Sensory Feedback")
         } footer: {
-            Text("Adjust in-app tactile and auditory cues. Turning these off reduces stimulation for users with sensory hypersensitivity, hyperacusis, or motor tremors without disabling system sounds.")
-                .font(.footnote)
-        }
-    }
-    
-    private var dataVisualizationSection: some View {
-        Section {
-            Toggle(isOn: $simplifyCharts) {
-                settingsRowLabel(
-                    icon: "chart.bar.xaxis",
-                    iconColor: .orange,
-                    title: "Simplify Charts",
-                    subtitle: "Present data as high-legibility plain text lists and tables instead of complex vector charts"
-                )
-            }
-            .accessibilityLabel("Simplify Charts")
-            .accessibilityHint("Replaces multi-axis radar charts and complex graphics with plain text lists.")
-        } header: {
-            Text("Data Visualization")
-        } footer: {
-            Text("Substitutes circular gauges, bezier curves, and multi-variable radar charts with structured text and numerical lists. Recommended for users with cognitive fatigue, low vision, or screen reader navigation.")
-                .font(.footnote)
-        }
-    }
-    
-    private var inputFallbackSection: some View {
-        Section {
-            Toggle(isOn: $isManualInputModeEnabled) {
-                settingsRowLabel(
-                    icon: "hand.point.up.left.and.text",
-                    iconColor: .green,
-                    title: "Manual Input Mode",
-                    subtitle: "Bypass camera body/motion tracking and enter workout metrics manually"
-                )
-            }
-            .accessibilityLabel("Manual Input Mode")
-            .accessibilityHint("Allows manual form entry of workout metrics instead of real-time camera tracking.")
-        } header: {
-            Text("Input Fallback")
-        } footer: {
-            Text("Allows entering exercise duration, intensity, and sets directly through standard forms. Designed for athletes with motor difficulties, tremors, or positioning constraints who cannot utilize camera-based motion tracking.")
+            Text("Adjust in-app tactile feedback. Turning this off disables vibration responses when interacting with buttons, checkmarks, and targets.")
                 .font(.footnote)
         }
     }
