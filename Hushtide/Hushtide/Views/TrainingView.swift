@@ -68,9 +68,8 @@ public struct TrainingView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Bottom breathing room above TabBar
                     Spacer()
-                        .frame(height: 120)
+                        .frame(height: 20)
                 }
                 .padding(.top, 4)
             }
