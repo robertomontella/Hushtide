@@ -380,6 +380,9 @@ public final class TrainingModel {
 
         self.sleepModel.calendarModel = self.calendarModel
         self.sleepModel.isAppleHealthSynced = syncedStored
+        if syncedStored {
+            self.sleepModel.weeklySleepMinutes = self.sleepModel.currentWeeklySleepMinutes
+        }
         self.sleepModel.checkAndPerformDailyResetIfNeeded()
         self.sleepModel.selectDay(at: self.calendarModel.selectedDayIndex)
         self.sleepModel.onStateChanged = { [weak self] in

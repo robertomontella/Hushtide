@@ -99,7 +99,13 @@ public final class SleepModel {
     public var calendarModel: CalendarModel? = nil
     
     // MARK: - Apple Health Sync State
-    public var isAppleHealthSynced: Bool = false
+    public var isAppleHealthSynced: Bool = false {
+        didSet {
+            if isAppleHealthSynced {
+                weeklySleepMinutes = currentWeeklySleepMinutes
+            }
+        }
+    }
     
     // MARK: - Theme & Header
     public var title: String = "Sleep"
@@ -192,20 +198,51 @@ public final class SleepModel {
         ])
     ]
     
+    // MARK: - Dynamic Sleep Duration Calculations for Any Day
+    public func durationMinutes(for dayIndex: Int) -> Int {
+        guard dayIndex >= 0 && dayIndex < weeklyRecords.count else { return 0 }
+        if isDayIndexInFuture(dayIndex) || !isAppleHealthSynced { return 0 }
+        
+        if dayIndex == selectedDayIndex {
+            return durationMinutes
+        }
+        
+        let record = weeklyRecords[dayIndex]
+        if record.isManualSchedule {
+            guard record.inBedHour > 0 || record.asleepHour > 0 else { return 0 }
+            let bedMins = toMinutesFromMidnight(hour: record.inBedHour, minute: record.inBedMinute, period: record.inBedPeriod)
+            let wakeMins = toMinutesFromMidnight(hour: record.asleepHour, minute: record.asleepMinute, period: record.asleepPeriod)
+            if wakeMins >= bedMins {
+                return wakeMins - bedMins
+            } else {
+                return (24 * 60 - bedMins) + wakeMins
+            }
+        }
+        
+        if let health = record.healthAsleepMinutes, health > 0 {
+            return health
+        }
+        
+        if record.inBedHour > 0 || record.asleepHour > 0 {
+            let bedMins = toMinutesFromMidnight(hour: record.inBedHour, minute: record.inBedMinute, period: record.inBedPeriod)
+            let wakeMins = toMinutesFromMidnight(hour: record.asleepHour, minute: record.asleepMinute, period: record.asleepPeriod)
+            if wakeMins >= bedMins {
+                return wakeMins - bedMins
+            } else {
+                return (24 * 60 - bedMins) + wakeMins
+            }
+        }
+        
+        if dayIndex < weeklySleepMinutes.count && weeklySleepMinutes[dayIndex] > 0 {
+            return weeklySleepMinutes[dayIndex]
+        }
+        
+        return 0
+    }
+    
     public var currentWeeklySleepMinutes: [Int] {
         guard isAppleHealthSynced else { return [0, 0, 0, 0, 0, 0, 0] }
-        var list = weeklySleepMinutes
-        for i in 0..<list.count {
-            if isDayIndexInFuture(i) {
-                list[i] = 0
-            }
-        }
-        if selectedDayIndex >= 0 && selectedDayIndex < list.count {
-            if durationMinutes > 0 {
-                list[selectedDayIndex] = durationMinutes
-            }
-        }
-        return list
+        return (0..<weeklyRecords.count).map { durationMinutes(for: $0) }
     }
     
     public var weeklyAverageMinutes: Int {
@@ -372,6 +409,7 @@ public final class SleepModel {
     private enum StorageKeys {
         static let lastCheckmarksResetDate = "RecoveryApp_lastCheckmarksResetDate"
         static let savedWeeklyRecords = "RecoveryApp_savedWeeklySleepRecords"
+        static let targetSleepHours = "RecoveryApp_targetSleepHours"
     }
     
     // MARK: - Persistent Storage Helpers
@@ -387,6 +425,7 @@ public final class SleepModel {
            let decoded = try? JSONDecoder().decode([DaySleepRecord].self, from: data),
            decoded.count == 7 {
             self.weeklyRecords = decoded
+            self.weeklySleepMinutes = (0..<7).map { durationMinutes(for: $0) }
             return true
         }
         return false
@@ -496,6 +535,9 @@ public final class SleepModel {
     
     // MARK: - Initializer
     public init() {
+        if let savedGoal = UserDefaults.standard.object(forKey: StorageKeys.targetSleepHours) as? Double, savedGoal > 0 {
+            self.targetSleepHours = savedGoal
+        }
         _ = restoreWeeklyRecordsFromStorage()
         checkAndPerformDailyResetIfNeeded()
         updateBedtimeCheckmarkCompliance()
@@ -569,6 +611,7 @@ public final class SleepModel {
         
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             targetSleepHours = max(4.0, min(14.0, hours))
+            UserDefaults.standard.set(targetSleepHours, forKey: StorageKeys.targetSleepHours)
         }
         onStateChanged?()
     }

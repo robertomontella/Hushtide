@@ -148,13 +148,13 @@ extension TrainingModel {
         let calendar = Self.mondayCalendar
         var result: [Date: SleepNight] = [:]
         let schedule: [(asleep: Int, bedH: Int, bedM: Int, wakeH: Int, wakeM: Int)] = [
-            (465, 23, 0, 6, 45),  // Mon: 7h 45m
+            (485, 23, 0, 7, 5),   // Mon: 8h 05m (Target Met!)
             (390, 23, 30, 6, 0),  // Tue: 6h 30m
-            (465, 23, 0, 6, 45),  // Wed: 7h 45m
-            (480, 22, 45, 6, 45), // Thu: 8h 00m
+            (490, 22, 50, 7, 0),  // Wed: 8h 10m (Target Met!)
+            (480, 22, 45, 6, 45), // Thu: 8h 00m (Target Met!)
             (435, 23, 15, 6, 30), // Fri: 7h 15m
-            (510, 23, 30, 8, 0),  // Sat: 8h 30m
-            (480, 23, 0, 7, 0)    // Sun: 8h 00m
+            (510, 23, 30, 8, 0),  // Sat: 8h 30m (Target Met!)
+            (450, 23, 0, 6, 30)   // Sun: 7h 30m
         ]
         
         for offset in 0..<7 {
@@ -304,6 +304,7 @@ extension TrainingModel {
         // Ensure the active selected day in sleepModel has its record and minutes immediately loaded
         let activeIndex = calendarModel.selectedDayIndex
         sleepModel.selectDay(at: activeIndex)
+        sleepModel.saveWeeklyRecordsToStorage()
 
         // Compute Sleep Debt (difference between actual weekly average and target)
         let debt = sleepModel.weeklyAverageMinutes - Int(targetMinutes)
