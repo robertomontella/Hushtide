@@ -59,8 +59,12 @@ public struct MetricsBoxView: View {
     private func metricColumn(title: String, value: String) -> some View {
         VStack(spacing: 3) {
             Text(title)
-                .font(.system(size: 12, weight: appHighContrast ? .bold : .medium))
-                .foregroundColor(appHighContrast ? .primary : .secondary)
+                .font(.system(size: 12, weight: appHighContrast ? .bold : .semibold))
+                .foregroundColor(
+                    appHighContrast
+                        ? .primary
+                        : (colorScheme == .dark ? Color(red: 0.88, green: 0.89, blue: 0.92) : Color(red: 0.22, green: 0.23, blue: 0.26))
+                )
             
             Text(value)
                 .font(.system(size: 16, weight: appHighContrast ? .black : .bold, design: .rounded))

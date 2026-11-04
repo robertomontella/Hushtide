@@ -15,6 +15,16 @@ public struct TrainingView: View {
         self.viewModel = viewModel
     }
     
+    // High-contrast adaptive foreground color meeting WCAG AA (>= 4.5:1 ratio) in both light and dark modes
+    private var subtitleForegroundColor: Color {
+        if appHighContrast {
+            return .primary
+        }
+        return colorScheme == .dark
+            ? Color(red: 0.88, green: 0.89, blue: 0.92)
+            : Color(red: 0.22, green: 0.23, blue: 0.26)
+    }
+    
     public var body: some View {
         ZStack(alignment: .top) {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
@@ -131,8 +141,8 @@ public struct TrainingView: View {
                         .foregroundColor(.primary)
                     
                     Text(viewModel.calendarModel.formattedHeaderTitle)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(subtitleForegroundColor)
                 }
                 
                 Spacer()
@@ -225,20 +235,20 @@ public struct TrainingView: View {
                 readinessLabel: viewModel.readinessLabel
             )
             
-            VStack(spacing: 4) {
+            VStack(spacing: 5) {
                 Text(viewModel.recoveryStatusTitle)
-                    .font(.system(size: 20.5, weight: .bold))
+                    .font(.system(size: 21, weight: .bold))
                     .foregroundColor(viewModel.dynamicThemeColor)
                     .multilineTextAlignment(.center)
                     .animation(.easeInOut(duration: 0.25), value: viewModel.dynamicThemeColor)
                     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.recoveryStatusTitle)
                 
                 Text(viewModel.recoveryStatusDescription)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundColor(subtitleForegroundColor)
                     .multilineTextAlignment(.center)
+                    .lineSpacing(2.5)
                     .padding(.horizontal, 16)
-                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.recoveryStatusDescription)
             }
@@ -317,8 +327,8 @@ public struct TrainingView: View {
                                 .foregroundColor(.primary)
                             
                             Text("Discipline, target intensity & duration")
-                                .font(.system(size: 12.5, weight: .regular))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundColor(subtitleForegroundColor)
                         }
                         
                         Spacer()
@@ -375,8 +385,8 @@ public struct TrainingView: View {
                                         }
                                         
                                         Text("\(workout.durationMinutes) min • \(workout.timeString)")
-                                            .font(.system(size: 12.5, weight: .regular))
-                                            .foregroundColor(.secondary)
+                                            .font(.system(size: 12.5, weight: .medium))
+                                            .foregroundColor(subtitleForegroundColor)
                                     }
                                     
                                     Spacer()
@@ -546,10 +556,10 @@ public struct TrainingView: View {
             HStack(spacing: 5) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(subtitleForegroundColor)
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(subtitleForegroundColor)
             }
             Text(value)
                 .font(.system(size: 13.5, weight: .bold))

@@ -84,7 +84,17 @@ public struct AddWorkoutView: View {
             _selectedSport = State(initialValue: defaultSport)
             _durationHours = State(initialValue: 0)
             _durationMinutes = State(initialValue: 5)
-            _scheduledTime = State(initialValue: viewModel.dateForDay(at: viewModel.selectedDayIndex))
+            
+            let targetDay = viewModel.dateForDay(at: viewModel.selectedDayIndex)
+            let now = Date()
+            if Calendar.current.isDate(targetDay, inSameDayAs: now) {
+                _scheduledTime = State(initialValue: now)
+            } else {
+                let hour = Calendar.current.component(.hour, from: now)
+                let minute = Calendar.current.component(.minute, from: now)
+                let resolved = Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: targetDay) ?? targetDay
+                _scheduledTime = State(initialValue: resolved)
+            }
         }
     }
     

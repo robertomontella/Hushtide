@@ -710,22 +710,9 @@ public final class SleepModel {
         saveWeeklyRecordsToStorage()
     }
     
-    // Builds a sleep night model for the selected day
-    public func currentDaySleepNight() -> SleepNight {
-        let asleepMins = durationMinutes
-        let day = calendarModel?.selectedDate ?? Date()
-        if isSelectedDayInFuture || asleepMins <= 0 {
-            return SleepNight(
-                day: day,
-                bedtime: day,
-                wakeTime: day,
-                asleepMinutes: 0,
-                inBedMinutes: 0,
-                deepMinutes: 0,
-                remMinutes: 0
-            )
-        }
-        
+    // Builds a sleep night model for a specific weekday index
+    public func sleepNight(for dayIndex: Int) -> SleepNight {
+        let asleepMins = durationMinutes(for: dayIndex)
         var calendar = Calendar.current
         calendar.firstWeekday = 2
         let now = Date()
@@ -733,16 +720,34 @@ public final class SleepModel {
         let weekday = calendar.component(.weekday, from: now)
         let daysFromMonday = (weekday + 5) % 7
         let monday = calendar.date(byAdding: .day, value: -daysFromMonday, to: today) ?? today
-        let resolvedDay = calendar.date(byAdding: .day, value: selectedDayIndex, to: monday) ?? today
+        let resolvedDay = calendar.date(byAdding: .day, value: dayIndex, to: monday) ?? today
+        
+        if isDayIndexInFuture(dayIndex) || asleepMins <= 0 {
+            return SleepNight(
+                day: resolvedDay,
+                bedtime: resolvedDay,
+                wakeTime: resolvedDay,
+                asleepMinutes: 0,
+                inBedMinutes: 0,
+                deepMinutes: 0,
+                remMinutes: 0
+            )
+        }
+        
         let previousDay = calendar.date(byAdding: .day, value: -1, to: resolvedDay) ?? resolvedDay
         
-        var bedHour24 = inBedHour
-        if inBedPeriod == .pm && bedHour24 < 12 { bedHour24 += 12 }
-        if inBedPeriod == .am && bedHour24 == 12 { bedHour24 = 0 }
+        let record = (dayIndex >= 0 && dayIndex < weeklyRecords.count) ? weeklyRecords[dayIndex] : nil
+        var bedHour24 = record?.inBedHour ?? (dayIndex == selectedDayIndex ? inBedHour : 0)
+        let bMinute = record?.inBedMinute ?? (dayIndex == selectedDayIndex ? inBedMinute : 0)
+        let bPeriod = record?.inBedPeriod ?? (dayIndex == selectedDayIndex ? inBedPeriod : .pm)
+        if bPeriod == .pm && bedHour24 < 12 { bedHour24 += 12 }
+        if bPeriod == .am && bedHour24 == 12 { bedHour24 = 0 }
         
-        var wakeHour24 = asleepHour
-        if asleepPeriod == .pm && wakeHour24 < 12 { wakeHour24 += 12 }
-        if asleepPeriod == .am && wakeHour24 == 12 { wakeHour24 = 0 }
+        var wakeHour24 = record?.asleepHour ?? (dayIndex == selectedDayIndex ? asleepHour : 0)
+        let wMinute = record?.asleepMinute ?? (dayIndex == selectedDayIndex ? asleepMinute : 0)
+        let wPeriod = record?.asleepPeriod ?? (dayIndex == selectedDayIndex ? asleepPeriod : .am)
+        if wPeriod == .pm && wakeHour24 < 12 { wakeHour24 += 12 }
+        if wPeriod == .am && wakeHour24 == 12 { wakeHour24 = 0 }
         
         if bedHour24 == 0 && wakeHour24 == 0 && asleepMins > 0 {
             wakeHour24 = 7
@@ -752,8 +757,8 @@ public final class SleepModel {
             bedHour24 = bedTotal / 60
         }
         
-        let bedtime = calendar.date(bySettingHour: bedHour24, minute: inBedMinute, second: 0, of: previousDay) ?? previousDay
-        let wakeTime = calendar.date(bySettingHour: wakeHour24, minute: asleepMinute, second: 0, of: resolvedDay) ?? resolvedDay
+        let bedtime = calendar.date(bySettingHour: bedHour24, minute: bMinute, second: 0, of: previousDay) ?? previousDay
+        let wakeTime = calendar.date(bySettingHour: wakeHour24, minute: wMinute, second: 0, of: resolvedDay) ?? resolvedDay
         
         let inBedMins = Int((Double(asleepMins) / 0.90).rounded())
         let deepMins = Int((Double(asleepMins) * 0.18).rounded())
@@ -768,6 +773,11 @@ public final class SleepModel {
             deepMinutes: deepMins,
             remMinutes: remMins
         )
+    }
+    
+    // Builds a sleep night model for the selected day
+    public func currentDaySleepNight() -> SleepNight {
+        sleepNight(for: selectedDayIndex)
     }
     
     // Converts 12-hour time components to total minutes from midnight

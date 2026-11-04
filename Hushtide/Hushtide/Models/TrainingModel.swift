@@ -38,6 +38,22 @@ public final class TrainingModel {
     }
     private var _weeklyQualityPercentages: [Int] = [0, 0, 0, 0, 0, 0, 0]
     
+    public var weeklyReadinessScores: [Double] {
+        get {
+            var list = _weeklyReadinessScores
+            for i in 0..<list.count {
+                if calendarModel.isDayIndexInFuture(i) {
+                    list[i] = 0.0
+                }
+            }
+            return list
+        }
+        set {
+            _weeklyReadinessScores = newValue
+        }
+    }
+    private var _weeklyReadinessScores: [Double] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    
     public var weeklyQualityAverage: Int {
         guard isAppleHealthSynced else { return 0 }
         let nonFuture = (0..<weeklyQualityPercentages.count).filter { !calendarModel.isDayIndexInFuture($0) }
@@ -215,6 +231,14 @@ public final class TrainingModel {
     public enum StorageKeys {
         public static let savedWorkouts = "RecoveryApp_savedWorkouts"
         public static let deletedWorkoutUUIDs = "RecoveryApp_deletedWorkoutUUIDs"
+        public static let deletedWorkoutSignatures = "RecoveryApp_deletedWorkoutSignatures"
+        public static let savedReadinessScore = "RecoveryApp_savedReadinessScore"
+        public static let savedWeeklyReadinessScores = "RecoveryApp_savedWeeklyReadinessScores"
+        public static let savedQualityScore = "RecoveryApp_savedQualityScore"
+        public static let savedWeeklyQualityScores = "RecoveryApp_savedWeeklyQualityScores"
+        public static let savedSleepDebtValue = "RecoveryApp_savedSleepDebtValue"
+        public static let savedRegularityValue = "RecoveryApp_savedRegularityValue"
+        public static let savedRecoveryRecommendation = "RecoveryApp_savedRecoveryRecommendation"
         public static let isHapticsEnabled = "RecoveryApp_isHapticsEnabled"
         public static let isReduceMotionEnabled = "RecoveryApp_isReduceMotionEnabled"
         public static let isHighContrastEnabled = "RecoveryApp_isHighContrastEnabled"
@@ -252,6 +276,17 @@ public final class TrainingModel {
         didSet {
             saveDeletedWorkoutUUIDsToStorage()
         }
+    }
+    public var deletedWorkoutSignatures: Set<String> = [] {
+        didSet {
+            saveDeletedWorkoutSignaturesToStorage()
+        }
+    }
+    
+    // Generates a stable signature for a workout to prevent zombie re-import
+    public static func workoutSignature(sport: String, start: Date, duration: Int) -> String {
+        let roundedStart = Int(start.timeIntervalSince1970 / 60) * 60
+        return "\(sport.trimmingCharacters(in: .whitespaces).lowercased())_\(roundedStart)_\(duration)"
     }
     
     public var userName: String = "User"
@@ -338,20 +373,59 @@ public final class TrainingModel {
         if let deletedList = UserDefaults.standard.stringArray(forKey: StorageKeys.deletedWorkoutUUIDs) {
             self.deletedWorkoutUUIDs = Set(deletedList.compactMap { UUID(uuidString: $0) })
         }
+        if let deletedSigs = UserDefaults.standard.stringArray(forKey: StorageKeys.deletedWorkoutSignatures) {
+            self.deletedWorkoutSignatures = Set(deletedSigs)
+        }
 
         if let data = UserDefaults.standard.data(forKey: StorageKeys.savedWorkouts),
            let decoded = try? JSONDecoder().decode([LoggedWorkout].self, from: data) {
             let activeDeleted = self.deletedWorkoutUUIDs
+            let activeSigs = self.deletedWorkoutSignatures
             self.loggedWorkouts = decoded.filter {
-                !activeDeleted.contains($0.id) && ($0.healthKitUUID == nil || !activeDeleted.contains($0.healthKitUUID!))
+                let sig = Self.workoutSignature(sport: $0.sportType, start: $0.scheduledDate, duration: $0.durationMinutes)
+                let isDeleted = activeDeleted.contains($0.id) ||
+                    ($0.healthKitUUID != nil && activeDeleted.contains($0.healthKitUUID!)) ||
+                    activeSigs.contains(sig)
+                return !isDeleted
             }
         } else {
             self.loggedWorkouts = []
         }
 
-        let connectedStored = UserDefaults.standard.bool(forKey: StorageKeys.isAppleHealthConnected)
-        let syncedStored = UserDefaults.standard.bool(forKey: StorageKeys.isAppleHealthSynced)
-        let appleIdStored = UserDefaults.standard.bool(forKey: StorageKeys.isAppleIdSignedIn)
+        // Restore persisted readiness metrics if available
+        if let savedScore = UserDefaults.standard.object(forKey: StorageKeys.savedReadinessScore) as? Double {
+            self.readinessScore = savedScore
+        }
+        if let savedWeeklyReadiness = UserDefaults.standard.array(forKey: StorageKeys.savedWeeklyReadinessScores) as? [Double],
+           savedWeeklyReadiness.count == 7 {
+            self._weeklyReadinessScores = savedWeeklyReadiness
+        }
+        if let savedQuality = UserDefaults.standard.object(forKey: StorageKeys.savedQualityScore) as? Int {
+            self.qualityScore = savedQuality
+        }
+        if let savedWeeklyQuality = UserDefaults.standard.array(forKey: StorageKeys.savedWeeklyQualityScores) as? [Int],
+           savedWeeklyQuality.count == 7 {
+            self._weeklyQualityPercentages = savedWeeklyQuality
+        }
+        if let savedDebt = UserDefaults.standard.string(forKey: StorageKeys.savedSleepDebtValue) {
+            self.sleepDebtValue = savedDebt
+        }
+        if let savedReg = UserDefaults.standard.string(forKey: StorageKeys.savedRegularityValue) {
+            self.regularityMetric = SecondaryMetric(title: "Regularity", value: savedReg)
+        }
+        if let savedRec = UserDefaults.standard.string(forKey: StorageKeys.savedRecoveryRecommendation) {
+            self.customRecoveryRecommendation = savedRec
+        }
+
+        let connectedStored = UserDefaults.standard.object(forKey: StorageKeys.isAppleHealthConnected) != nil
+            ? UserDefaults.standard.bool(forKey: StorageKeys.isAppleHealthConnected)
+            : true
+        let syncedStored = UserDefaults.standard.object(forKey: StorageKeys.isAppleHealthSynced) != nil
+            ? UserDefaults.standard.bool(forKey: StorageKeys.isAppleHealthSynced)
+            : true
+        let appleIdStored = UserDefaults.standard.object(forKey: StorageKeys.isAppleIdSignedIn) != nil
+            ? UserDefaults.standard.bool(forKey: StorageKeys.isAppleIdSignedIn)
+            : true
         self.isAppleHealthConnected = connectedStored
         self.isAppleHealthSynced = syncedStored
         self.isAppleIdSignedIn = appleIdStored
@@ -380,6 +454,25 @@ public final class TrainingModel {
     public func saveDeletedWorkoutUUIDsToStorage() {
         let array = deletedWorkoutUUIDs.map { $0.uuidString }
         UserDefaults.standard.set(array, forKey: StorageKeys.deletedWorkoutUUIDs)
+    }
+
+    // Persists deleted workout signatures to UserDefaults
+    public func saveDeletedWorkoutSignaturesToStorage() {
+        let array = Array(deletedWorkoutSignatures)
+        UserDefaults.standard.set(array, forKey: StorageKeys.deletedWorkoutSignatures)
+    }
+
+    // Persists evaluated readiness status to UserDefaults
+    public func saveReadinessToStorage() {
+        UserDefaults.standard.set(readinessScore, forKey: StorageKeys.savedReadinessScore)
+        UserDefaults.standard.set(_weeklyReadinessScores, forKey: StorageKeys.savedWeeklyReadinessScores)
+        UserDefaults.standard.set(qualityScore, forKey: StorageKeys.savedQualityScore)
+        UserDefaults.standard.set(_weeklyQualityPercentages, forKey: StorageKeys.savedWeeklyQualityScores)
+        UserDefaults.standard.set(sleepDebtValue, forKey: StorageKeys.savedSleepDebtValue)
+        UserDefaults.standard.set(regularityMetric.value, forKey: StorageKeys.savedRegularityValue)
+        if let rec = customRecoveryRecommendation {
+            UserDefaults.standard.set(rec, forKey: StorageKeys.savedRecoveryRecommendation)
+        }
     }
     
     public var dynamicThemeColor: Color {
@@ -522,6 +615,7 @@ public final class TrainingModel {
             guard let self else { return }
             do {
                 let uuid = try await health.saveWorkout(
+                    localID: localID,
                     sport: sportType,
                     intensity: intensity,
                     start: scheduledDate,
@@ -530,6 +624,14 @@ public final class TrainingModel {
                     rpe: rpe,
                     notes: notes
                 )
+                if deletedWorkoutUUIDs.contains(localID) {
+                    if let uuid {
+                        deletedWorkoutUUIDs.insert(uuid)
+                        saveDeletedWorkoutUUIDsToStorage()
+                        try? await health.deleteWorkout(uuid: uuid)
+                    }
+                    return
+                }
                 if let uuid, let index = loggedWorkouts.firstIndex(where: { $0.id == localID }) {
                     loggedWorkouts[index].healthKitUUID = uuid
                     saveWorkoutsToStorage()
@@ -556,8 +658,14 @@ public final class TrainingModel {
     // Deletes a workout locally and removes it from Apple Health
     public func deleteWorkout(id: UUID) {
         var healthKitUUIDToDelete: UUID? = nil
+        var signatureToDelete: String? = nil
         if let workout = loggedWorkouts.first(where: { $0.id == id }) {
             healthKitUUIDToDelete = workout.healthKitUUID
+            signatureToDelete = Self.workoutSignature(
+                sport: workout.sportType,
+                start: workout.scheduledDate,
+                duration: workout.durationMinutes
+            )
         }
         
         deletedWorkoutUUIDs.insert(id)
@@ -566,18 +674,31 @@ public final class TrainingModel {
         }
         saveDeletedWorkoutUUIDsToStorage()
         
+        if let sig = signatureToDelete {
+            deletedWorkoutSignatures.insert(sig)
+            saveDeletedWorkoutSignaturesToStorage()
+        }
+        
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             loggedWorkouts.removeAll {
-                $0.id == id || ($0.healthKitUUID != nil && $0.healthKitUUID == healthKitUUIDToDelete)
+                let sig = Self.workoutSignature(sport: $0.sportType, start: $0.scheduledDate, duration: $0.durationMinutes)
+                let isMatch = $0.id == id ||
+                    ($0.healthKitUUID != nil && $0.healthKitUUID == healthKitUUIDToDelete) ||
+                    (signatureToDelete != nil && sig == signatureToDelete)
+                return isMatch
             }
             evaluateRecovery()
         }
         saveWorkoutsToStorage()
         HapticManager.notification(.success)
         
-        if let hkUUID = healthKitUUIDToDelete, health.isAuthorized && health.canSaveWorkouts {
+        if health.isAuthorized && health.canSaveWorkouts {
+            let hkUUID = healthKitUUIDToDelete
             Task { [weak self] in
-                try? await self?.health.deleteWorkout(uuid: hkUUID)
+                if let hkUUID {
+                    try? await self?.health.deleteWorkout(uuid: hkUUID)
+                }
+                try? await self?.health.deleteWorkout(localID: id)
             }
         }
     }
@@ -603,6 +724,12 @@ public final class TrainingModel {
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             calendarModel.selectDay(at: index)
             sleepModel.selectDay(at: index)
+            if index >= 0 && index < _weeklyReadinessScores.count && _weeklyReadinessScores[index] > 0 {
+                self.readinessScore = _weeklyReadinessScores[index]
+            }
+            if index >= 0 && index < _weeklyQualityPercentages.count && _weeklyQualityPercentages[index] > 0 {
+                self.qualityScore = _weeklyQualityPercentages[index]
+            }
             evaluateRecovery()
         }
     }
@@ -640,9 +767,12 @@ public final class TrainingModel {
                 }
                 if !isAppleHealthSynced {
                     self._weeklyQualityPercentages = [0, 0, 0, 0, 0, 0, 0]
+                    self._weeklyReadinessScores = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                 } else if selectedDayIndex >= 0 && selectedDayIndex < _weeklyQualityPercentages.count {
                     self._weeklyQualityPercentages[selectedDayIndex] = 0
+                    self._weeklyReadinessScores[selectedDayIndex] = 0.0
                 }
+                saveReadinessToStorage()
             }
             return
         }
@@ -650,6 +780,15 @@ public final class TrainingModel {
         let workoutsAsHealth = loggedWorkouts.map { $0.toHealthWorkout() }
         let currentNight = sleepModel.currentDaySleepNight()
         let recentNights = sleepModel.toSleepNights()
+        
+        let targetDate = dateForDay(at: selectedDayIndex)
+        let evalDate: Date
+        if Calendar.current.isDateInToday(targetDate) {
+            evalDate = Date()
+        } else {
+            let cal = Calendar.current
+            evalDate = cal.date(bySettingHour: 23, minute: 59, second: 59, of: targetDate) ?? targetDate
+        }
         
         let input = RecoveryInput(
             currentNight: currentNight,
@@ -661,7 +800,7 @@ public final class TrainingModel {
             heartRateVariability: latestHRV,
             heartRateVariabilityBaseline: baselineHRV,
             recentWorkouts: workoutsAsHealth,
-            evaluationDate: dateForDay(at: selectedDayIndex)
+            evaluationDate: evalDate
         )
         
         let result = RecoveryAlgorithm.evaluate(input: input)
@@ -674,9 +813,77 @@ public final class TrainingModel {
             self.regularityMetric = SecondaryMetric(title: "Regularity", value: result.regularityStatus)
             self.customRecoveryRecommendation = result.recoveryRecommendation
             
+            if selectedDayIndex >= 0 && selectedDayIndex < _weeklyReadinessScores.count {
+                self._weeklyReadinessScores[selectedDayIndex] = result.readinessScore
+            }
             if selectedDayIndex >= 0 && selectedDayIndex < _weeklyQualityPercentages.count {
                 self._weeklyQualityPercentages[selectedDayIndex] = result.qualityScore
             }
+            saveReadinessToStorage()
+        }
+    }
+    
+    // Evaluates recovery output for a specific weekday index
+    public func evaluateRecovery(for dayIndex: Int) -> RecoveryResult? {
+        guard dayIndex >= 0 && dayIndex < days.count else { return nil }
+        guard !calendarModel.isDayIndexInFuture(dayIndex) && isAppleHealthSynced else { return nil }
+        
+        let workoutsAsHealth = loggedWorkouts.map { $0.toHealthWorkout() }
+        let targetDate = dateForDay(at: dayIndex)
+        let evalDate: Date
+        if Calendar.current.isDateInToday(targetDate) {
+            evalDate = Date()
+        } else {
+            let cal = Calendar.current
+            evalDate = cal.date(bySettingHour: 23, minute: 59, second: 59, of: targetDate) ?? targetDate
+        }
+        
+        let recordChecks = (dayIndex < sleepModel.weeklyRecords.count)
+            ? sleepModel.weeklyRecords[dayIndex].checkmarks
+            : sleepModel.checkmarks
+        
+        let currentNight = sleepModel.sleepNight(for: dayIndex)
+        let recentNights = sleepModel.toSleepNights()
+        
+        let input = RecoveryInput(
+            currentNight: currentNight,
+            recentNights: recentNights,
+            targetSleepHours: sleepModel.targetSleepHours,
+            checkmarks: recordChecks,
+            restingHeartRate: latestRHR,
+            restingHeartRateBaseline: baselineRHR,
+            heartRateVariability: latestHRV,
+            heartRateVariabilityBaseline: baselineHRV,
+            recentWorkouts: workoutsAsHealth,
+            evaluationDate: evalDate
+        )
+        return RecoveryAlgorithm.evaluate(input: input)
+    }
+    
+    // Evaluates recovery and readiness for all days in the current week
+    public func evaluateAllDaysRecovery() {
+        guard isAppleHealthSynced else {
+            withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                _weeklyReadinessScores = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                _weeklyQualityPercentages = [0, 0, 0, 0, 0, 0, 0]
+                readinessScore = 0.0
+                qualityScore = 0
+                saveReadinessToStorage()
+            }
+            return
+        }
+        
+        withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            for i in 0..<7 {
+                if calendarModel.isDayIndexInFuture(i) {
+                    _weeklyReadinessScores[i] = 0.0
+                    _weeklyQualityPercentages[i] = 0
+                } else if let result = evaluateRecovery(for: i) {
+                    _weeklyReadinessScores[i] = result.readinessScore
+                    _weeklyQualityPercentages[i] = result.qualityScore
+                }
+            }
+            evaluateRecovery()
         }
     }
     

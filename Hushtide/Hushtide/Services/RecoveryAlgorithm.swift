@@ -304,17 +304,41 @@ public enum RecoveryAlgorithm {
         let totalWeight = weightedParts.reduce(0) { $0 + $1.weight }
         var score = weightedParts.reduce(0) { $0 + $1.score * $1.weight } / totalWeight
         
+        var workoutFatigue: Double = 0.0
         for workout in workouts {
             let secondsAgo = evaluationDate.timeIntervalSince(workout.end)
-            if workout.intensity == .hard && secondsAgo >= 0 && secondsAgo < 12 * 3600 {
-                score -= 8.0
-                break
-            } else if workout.intensity == .hard && secondsAgo >= 12 * 3600 && secondsAgo < 24 * 3600 {
-                score -= 4.0
+            if secondsAgo < -3600 {
+                continue
+            }
+            
+            let isRecent = secondsAgo >= -3600 && secondsAgo < 12 * 3600
+            let isLingering = secondsAgo >= 12 * 3600 && secondsAgo < 24 * 3600
+            
+            switch workout.intensity {
+            case .hard:
+                if isRecent {
+                    workoutFatigue += 8.0
+                } else if isLingering {
+                    workoutFatigue += 4.0
+                }
+            case .medium:
+                if isRecent {
+                    workoutFatigue += 5.0
+                } else if isLingering {
+                    workoutFatigue += 2.5
+                }
+            case .light:
+                if isRecent {
+                    workoutFatigue += 3.0
+                } else if isLingering {
+                    workoutFatigue += 1.5
+                }
+            case .rest:
                 break
             }
         }
         
+        score -= min(workoutFatigue, 50.0)
         return max(0.0, min(100.0, score.rounded()))
     }
     

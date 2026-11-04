@@ -32,6 +32,7 @@ public struct ReadinessArcShape: Shape {
 public struct ReadinessRingView: View {
     @Environment(\.appHighContrast) private var appHighContrast
     @Environment(\.appReduceMotion) private var appReduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     public let score: Double
     public let dynamicColor: Color
     public let readinessLabel: String
@@ -74,9 +75,13 @@ public struct ReadinessRingView: View {
                     .contentTransition(.numericText())
                 
                 Text(readinessLabel)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 11.5, weight: .bold))
                     .tracking(2.0)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(
+                        appHighContrast
+                            ? .primary
+                            : (colorScheme == .dark ? Color(red: 0.88, green: 0.89, blue: 0.92) : Color(red: 0.22, green: 0.23, blue: 0.26))
+                    )
             }
             .offset(y: 20)
         }

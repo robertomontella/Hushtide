@@ -19,6 +19,7 @@ public struct SleepNight: Hashable, Sendable {
 
 public struct HealthWorkout: Hashable, Sendable {
     public let uuid: UUID
+    public let localID: UUID?
     public let sportName: String
     public let start: Date
     public let end: Date
@@ -28,6 +29,32 @@ public struct HealthWorkout: Hashable, Sendable {
     public let focusArea: String
     public let rpe: Int
     public let notes: String
+
+    public init(
+        uuid: UUID,
+        localID: UUID? = nil,
+        sportName: String,
+        start: Date,
+        end: Date,
+        durationMinutes: Int,
+        activeKilocalories: Double? = nil,
+        intensity: IntensityLevel,
+        focusArea: String,
+        rpe: Int,
+        notes: String
+    ) {
+        self.uuid = uuid
+        self.localID = localID
+        self.sportName = sportName
+        self.start = start
+        self.end = end
+        self.durationMinutes = durationMinutes
+        self.activeKilocalories = activeKilocalories
+        self.intensity = intensity
+        self.focusArea = focusArea
+        self.rpe = rpe
+        self.notes = notes
+    }
 }
 
 @Observable
@@ -44,6 +71,7 @@ public final class HealthKitManager {
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
 
     private enum MetadataKey {
+        static let localID = "HushtideLocalID"
         static let sport = "RecoveryAppSport"
         static let intensity = "RecoveryAppIntensity"
         static let focusArea = "RecoveryAppFocusArea"
@@ -141,7 +169,9 @@ public final class HealthKitManager {
             do {
                 for try await _ in descriptor.results(for: store) {
                     if isFirstBatch { isFirstBatch = false; continue }
-                    onChange()
+                    await MainActor.run {
+                        onChange()
+                    }
                 }
             } catch {
                 print("HealthKit sleep observer stopped: \(error.localizedDescription)")
@@ -157,7 +187,9 @@ public final class HealthKitManager {
             do {
                 for try await _ in descriptor.results(for: store) {
                     if isFirstBatch { isFirstBatch = false; continue }
-                    onChange()
+                    await MainActor.run {
+                        onChange()
+                    }
                 }
             } catch {
                 print("HealthKit workout observer stopped: \(error.localizedDescription)")
@@ -181,6 +213,7 @@ public final class HealthKitManager {
 
     // Fetches aggregated sleep nights within a specified date range
     public func fetchSleepNights(from firstDay: Date, through lastDay: Date) async throws -> [Date: SleepNight] {
+        guard isAvailable, isAuthorized else { return [:] }
         let calendar = Calendar.current
         let firstStart = calendar.startOfDay(for: firstDay)
         let lastStart = calendar.startOfDay(for: lastDay)
@@ -259,6 +292,7 @@ public final class HealthKitManager {
 
     // Fetches the most recent sample value for a quantity type
     public func latestQuantity(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit, since: Date? = nil) async throws -> Double? {
+        guard isAvailable, isAuthorized else { return nil }
         let predicate = since.map { HKQuery.predicateForSamples(withStart: $0, end: nil, options: []) }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: HKQuantityType(identifier), predicate: predicate)],
@@ -270,6 +304,7 @@ public final class HealthKitManager {
 
     // Computes the average value of a quantity type over a date range
     public func averageQuantity(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit, from start: Date, to end: Date) async throws -> Double? {
+        guard isAvailable, isAuthorized else { return nil }
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: HKQuantityType(identifier), predicate: predicate),
@@ -280,7 +315,7 @@ public final class HealthKitManager {
 
     // Retrieves biological sex from Apple Health profile
     public func biologicalSexDescription() -> String? {
-        guard let sex = try? store.biologicalSex().biologicalSex else { return nil }
+        guard isAvailable, isAuthorized, let sex = try? store.biologicalSex().biologicalSex else { return nil }
         switch sex {
         case .female: return "Female"
         case .male: return "Male"
@@ -291,6 +326,7 @@ public final class HealthKitManager {
 
     // Fetches recorded workouts within a date range
     public func fetchWorkouts(from start: Date, to end: Date) async throws -> [HealthWorkout] {
+        guard isAvailable, isAuthorized else { return [] }
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.workout(predicate)],
@@ -313,8 +349,16 @@ public final class HealthKitManager {
                 return Self.estimateIntensity(kilocalories: kcal, minutes: minutes)
             }()
 
+            let parsedLocalID: UUID? = {
+                if let str = (metadata[MetadataKey.localID] as? String) ?? (metadata["RecoveryAppLocalID"] as? String) {
+                    return UUID(uuidString: str)
+                }
+                return nil
+            }()
+
             return HealthWorkout(
                 uuid: workout.uuid,
+                localID: parsedLocalID,
                 sportName: (metadata[MetadataKey.sport] as? String) ?? Self.sportName(for: workout.workoutActivityType),
                 start: workout.startDate,
                 end: workout.endDate,
@@ -330,6 +374,7 @@ public final class HealthKitManager {
 
     // Saves a logged workout to Apple Health and returns its UUID
     public func saveWorkout(
+        localID: UUID? = nil,
         sport: String,
         intensity: IntensityLevel,
         start: Date,
@@ -354,6 +399,10 @@ public final class HealthKitManager {
             MetadataKey.focusArea: focusArea,
             MetadataKey.rpe: NSNumber(value: rpe)
         ]
+        if let localID {
+            metadata[MetadataKey.localID] = localID.uuidString
+            metadata["RecoveryAppLocalID"] = localID.uuidString
+        }
         if !notes.isEmpty { metadata[MetadataKey.notes] = notes }
 
         try await builder.beginCollection(at: start)
@@ -367,14 +416,26 @@ public final class HealthKitManager {
     public func deleteWorkout(uuid: UUID) async throws {
         guard isAvailable, canSaveWorkouts else { return }
         let predicate = HKQuery.predicateForObject(with: uuid)
+        _ = try? await store.deleteObjects(of: HKObjectType.workoutType(), predicate: predicate)
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.workout(predicate)],
             sortDescriptors: [],
-            limit: 1
+            limit: 5
         )
-        if let sample = try await descriptor.result(for: store).first {
-            try await store.delete(sample)
+        if let samples = try? await descriptor.result(for: store) {
+            for sample in samples {
+                try? await store.delete(sample)
+            }
         }
+    }
+
+    // Deletes any workout from Apple Health that matches a local UUID in its metadata
+    public func deleteWorkout(localID: UUID) async throws {
+        guard isAvailable, canSaveWorkouts else { return }
+        let p1 = HKQuery.predicateForObjects(withMetadataKey: MetadataKey.localID, operatorType: .equalTo, value: localID.uuidString)
+        let p2 = HKQuery.predicateForObjects(withMetadataKey: "RecoveryAppLocalID", operatorType: .equalTo, value: localID.uuidString)
+        let compound = NSCompoundPredicate(orPredicateWithSubpredicates: [p1, p2])
+        _ = try? await store.deleteObjects(of: HKObjectType.workoutType(), predicate: compound)
     }
 
     // Maps a sport name to a HealthKit workout activity type

@@ -91,7 +91,13 @@ extension TrainingModel {
         }
 
         var workouts = (try? await health.fetchWorkouts(from: startOfWeek, to: endOfWeek)) ?? []
-        workouts.removeAll { deletedWorkoutUUIDs.contains($0.uuid) }
+        workouts.removeAll { w in
+            let sig = Self.workoutSignature(sport: w.sportName, start: w.start, duration: w.durationMinutes)
+            let isDeleted = deletedWorkoutUUIDs.contains(w.uuid) ||
+                (w.localID != nil && deletedWorkoutUUIDs.contains(w.localID!)) ||
+                deletedWorkoutSignatures.contains(sig)
+            return isDeleted
+        }
         
         let hasInitializedBaseline = UserDefaults.standard.bool(forKey: "RecoveryApp_hasInitializedBaseline")
         if workouts.isEmpty && loggedWorkouts.isEmpty && !hasInitializedBaseline && !deletedWorkoutUUIDs.contains(Self.baselineWorkoutUUID) {
@@ -119,14 +125,7 @@ extension TrainingModel {
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             applySleep(nights: nights, today: today, startOfWeek: startOfWeek, rhr: rhrToday, rhrBaseline: rhrBaseline)
             applyWorkouts(workouts, startOfWeek: startOfWeek)
-            applyRecoveryAlgorithm(
-                nights: nights,
-                today: today,
-                hrv: hrvToday, hrvBaseline: hrvBaseline,
-                rhr: rhrToday, rhrBaseline: rhrBaseline,
-                workouts: workouts,
-                now: now
-            )
+            evaluateAllDaysRecovery()
             applyProfile(weightKg: weightKg, heightCm: heightCm, workouts: workouts)
         }
 
@@ -297,12 +296,18 @@ extension TrainingModel {
 
     // Merges HealthKit workouts into the local logged workouts collection
     private func applyWorkouts(_ workouts: [HealthWorkout], startOfWeek: Date) {
-        let validWorkouts = workouts.filter { !deletedWorkoutUUIDs.contains($0.uuid) }
+        let validWorkouts = workouts.filter { w in
+            let sig = Self.workoutSignature(sport: w.sportName, start: w.start, duration: w.durationMinutes)
+            let isDeleted = deletedWorkoutUUIDs.contains(w.uuid) ||
+                (w.localID != nil && deletedWorkoutUUIDs.contains(w.localID!)) ||
+                deletedWorkoutSignatures.contains(sig)
+            return !isDeleted
+        }
         guard !validWorkouts.isEmpty else { return }
 
         let imported = validWorkouts.map { w in
             LoggedWorkout(
-                id: w.uuid,
+                id: w.localID ?? w.uuid,
                 sportType: w.sportName,
                 intensity: w.intensity,
                 durationMinutes: w.durationMinutes,
@@ -316,14 +321,26 @@ extension TrainingModel {
         
         var mergedMap: [UUID: LoggedWorkout] = [:]
         for workout in loggedWorkouts {
-            if !deletedWorkoutUUIDs.contains(workout.id) && !(workout.healthKitUUID.map { deletedWorkoutUUIDs.contains($0) } ?? false) {
+            let sig = Self.workoutSignature(sport: workout.sportType, start: workout.scheduledDate, duration: workout.durationMinutes)
+            let isDeleted = deletedWorkoutUUIDs.contains(workout.id) ||
+                (workout.healthKitUUID != nil && deletedWorkoutUUIDs.contains(workout.healthKitUUID!)) ||
+                deletedWorkoutSignatures.contains(sig)
+            if !isDeleted {
                 mergedMap[workout.id] = workout
             }
         }
         
         for workout in imported {
-            if !deletedWorkoutUUIDs.contains(workout.id) {
-                if let existing = loggedWorkouts.first(where: { $0.healthKitUUID == workout.healthKitUUID }) {
+            let sig = Self.workoutSignature(sport: workout.sportType, start: workout.scheduledDate, duration: workout.durationMinutes)
+            let isDeleted = deletedWorkoutUUIDs.contains(workout.id) ||
+                (workout.healthKitUUID != nil && deletedWorkoutUUIDs.contains(workout.healthKitUUID!)) ||
+                deletedWorkoutSignatures.contains(sig)
+            if !isDeleted {
+                if let existing = loggedWorkouts.first(where: {
+                    $0.id == workout.id ||
+                    ($0.healthKitUUID != nil && $0.healthKitUUID == workout.healthKitUUID) ||
+                    Self.workoutSignature(sport: $0.sportType, start: $0.scheduledDate, duration: $0.durationMinutes) == sig
+                }) {
                     mergedMap[existing.id] = existing
                 } else {
                     mergedMap[workout.id] = workout
@@ -343,29 +360,7 @@ extension TrainingModel {
         workouts: [HealthWorkout],
         now: Date
     ) {
-        let sortedNights = nights.values.sorted { $0.day < $1.day }
-        let currentNight = nights[today] ?? sortedNights.last
-        
-        let input = RecoveryInput(
-            currentNight: currentNight,
-            recentNights: sortedNights,
-            targetSleepHours: sleepModel.targetSleepHours,
-            checkmarks: sleepModel.checkmarks,
-            restingHeartRate: rhr,
-            restingHeartRateBaseline: rhrBaseline,
-            heartRateVariability: hrv,
-            heartRateVariabilityBaseline: hrvBaseline,
-            recentWorkouts: workouts,
-            evaluationDate: now
-        )
-        
-        let result = RecoveryAlgorithm.evaluate(input: input)
-        
-        readinessScore = result.readinessScore
-        qualityScore = result.qualityScore
-        sleepDebtValue = result.sleepDebtFormatted
-        regularityMetric = SecondaryMetric(title: "Regularity", value: result.regularityStatus)
-        customRecoveryRecommendation = result.recoveryRecommendation
+        evaluateAllDaysRecovery()
     }
 
     // Updates user profile metrics with HealthKit body measurements
