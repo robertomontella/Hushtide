@@ -15,19 +15,14 @@ public struct PrivacySettingsView: View {
     public var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 18) {
-                // MARK: - Hero Privacy Banner (GDPR & Privacy)
                 gdprHeroBanner
                 
-                // MARK: - Core Guarantees
                 privacyPillarsSection
                 
-                // MARK: - HealthKit & Apple Health Protection
                 healthKitPrivacySection
                 
-                // MARK: - User Rights (GDPR Rights)
                 gdprRightsSection
                 
-                // MARK: - Legal Footer
                 legalFooterSection
                 
                 Spacer().frame(height: 30)
@@ -58,7 +53,6 @@ public struct PrivacySettingsView: View {
         }
     }
     
-    // MARK: - GDPR Hero Banner
     private var gdprHeroBanner: some View {
         VStack(spacing: 12) {
             ZStack {
@@ -99,7 +93,6 @@ public struct PrivacySettingsView: View {
         )
     }
     
-    // MARK: - Core Privacy Pillars
     private var privacyPillarsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("YOUR DATA, SECURE")
@@ -140,7 +133,6 @@ public struct PrivacySettingsView: View {
         }
     }
     
-    // MARK: - HealthKit Section
     private var healthKitPrivacySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("APPLE HEALTH INTEGRATION (HEALTHKIT)")
@@ -187,7 +179,6 @@ public struct PrivacySettingsView: View {
         }
     }
     
-    // MARK: - User Rights Section (GDPR Art. 15-22)
     private var gdprRightsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("YOUR RIGHTS (GDPR)")
@@ -196,7 +187,6 @@ public struct PrivacySettingsView: View {
                 .padding(.horizontal, 4)
             
             VStack(spacing: 0) {
-                // Portability (Art. 20)
                 Button {
                     HapticManager.impact(.light)
                     isExportSuccessAlertPresented = true
@@ -230,7 +220,6 @@ public struct PrivacySettingsView: View {
                 
                 Divider().padding(.leading, 58)
                 
-                // Right to Erasure (Art. 17)
                 Button {
                     HapticManager.impact(.medium)
                     isResetConfirmationPresented = true
@@ -270,7 +259,6 @@ public struct PrivacySettingsView: View {
         }
     }
     
-    // MARK: - Legal Footer Section
     private var legalFooterSection: some View {
         VStack(spacing: 6) {
             Text("Data Controller: Hushtide Development Team (Italy)")

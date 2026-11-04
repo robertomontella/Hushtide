@@ -21,14 +21,13 @@ public struct TrainingView: View {
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
-                    // MARK: - Header with Date & Weekday Selector & Calendar Button
                     StandardHeaderView(
                         title: viewModel.trainingTitle,
                         dateSubtitle: viewModel.currentDaySubtitle,
                         days: viewModel.days,
                         selectedDayIndex: viewModel.selectedDayIndex,
-                        showProfileButton: true, // Enables top-right corner action button
-                        profileIconName: "calendar", // Renders calendar icon for date picker
+                        showProfileButton: true,
+                        profileIconName: "calendar",
                         onSelectDay: { index in
                             withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 expandedWorkoutId = nil
@@ -43,7 +42,6 @@ public struct TrainingView: View {
                         }
                     )
                     .simultaneousGesture(
-                        // Swipe gesture from top to bottom on header to reveal calendar
                         DragGesture(minimumDistance: 20)
                             .onEnded { value in
                                 if value.translation.height > 40 && abs(value.translation.width) < 50 && !isCalendarOpen {
@@ -55,15 +53,11 @@ public struct TrainingView: View {
                             }
                     )
                     
-                    // MARK: - Screen Content (Compact, Elegant & Feature-Complete)
                     VStack(spacing: 16) {
-                        // 1. Main Readiness Card (Compact)
                         mainReadinessCard
                         
-                        // 2. Recommended Intensity (Badge as Title + Auto-selected Buttons)
                         recommendedIntensitySection
                         
-                        // 3. Add Your Workout Feature
                         addWorkoutSection
                     }
                     .padding(.horizontal, 20)
@@ -80,9 +74,7 @@ public struct TrainingView: View {
                 }
             }
             
-            // MARK: - Top-Down Drop-Down Calendar (Slides from Top to Bottom)
             if isCalendarOpen {
-                // Dimmed Backdrop Overlay
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
@@ -92,7 +84,6 @@ public struct TrainingView: View {
                     }
                     .transition(.opacity)
                 
-                // Calendar Panel Dropdown
                 calendarDropDownView
                     .transition(
                         .asymmetric(
@@ -131,10 +122,8 @@ public struct TrainingView: View {
         }
     }
     
-    // MARK: - Calendar Drop-Down Panel View (Slides Down from Top)
     private var calendarDropDownView: some View {
         VStack(spacing: 12) {
-            // Header Bar inside Dropdown
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Select Date")
@@ -148,7 +137,6 @@ public struct TrainingView: View {
                 
                 Spacer()
                 
-                // Jump to Today Pill Button
                 Button {
                     HapticManager.impact(.light)
                     viewModel.calendarModel.goToToday()
@@ -170,7 +158,6 @@ public struct TrainingView: View {
                 }
                 .buttonStyle(.plain)
                 
-                // Close Circle Button
                 Button {
                     HapticManager.impact(.light)
                     withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
@@ -186,7 +173,6 @@ public struct TrainingView: View {
             .padding(.horizontal, 20)
             .padding(.top, 14)
             
-            // Graphical Calendar DatePicker
             DatePicker(
                 "Select Date",
                 selection: Binding(
@@ -202,7 +188,6 @@ public struct TrainingView: View {
             .tint(viewModel.dynamicThemeColor)
             .padding(.horizontal, 14)
             
-            // Bottom Swipe Drag Handle Bar (Swipe down or up to dismiss)
             VStack(spacing: 4) {
                 Capsule()
                     .fill(Color(uiColor: .systemGray3))
@@ -232,17 +217,14 @@ public struct TrainingView: View {
         .padding(.top, 6)
     }
     
-    // MARK: - Main Readiness Card (Compact & Reduced)
     private var mainReadinessCard: some View {
         VStack(spacing: 14) {
-            // Semicircular Arc Gauge (Read-only display)
             ReadinessRingView(
                 score: viewModel.readinessScore,
                 dynamicColor: viewModel.dynamicThemeColor,
                 readinessLabel: viewModel.readinessLabel
             )
             
-            // Recovery Status & Description
             VStack(spacing: 4) {
                 Text(viewModel.recoveryStatusTitle)
                     .font(.system(size: 20.5, weight: .bold))
@@ -262,7 +244,6 @@ public struct TrainingView: View {
             }
             .padding(.top, -4)
             
-            // Secondary Metrics Box (Compact, ends cleanly)
             MetricsBoxView(
                 sleepDebtMetric: viewModel.sleepDebtMetric,
                 restedMetric: viewModel.qualityMetric,
@@ -279,10 +260,8 @@ public struct TrainingView: View {
         )
     }
     
-    // MARK: - Recommended Intensity Section (Badge as Title + Auto-selected Cards)
     private var recommendedIntensitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Colored Pill Badge as the New Title (enlarged & prominent)
             HStack(spacing: 7) {
                 Circle()
                     .fill(viewModel.dynamicThemeColor)
@@ -301,7 +280,6 @@ public struct TrainingView: View {
             .animation(.easeInOut(duration: 0.25), value: viewModel.dynamicThemeColor)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.recommendedIntensityLevel)
             
-            // 4 Intensity Cards (Auto-activated, read-only)
             IntensitySelectorView(
                 recommendedIntensity: viewModel.recommendedIntensityLevel,
                 dynamicColor: viewModel.dynamicThemeColor
@@ -309,7 +287,6 @@ public struct TrainingView: View {
         }
     }
     
-    // MARK: - Add Your Workout Section
     private var addWorkoutSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ADD YOUR WORKOUT")
@@ -319,7 +296,6 @@ public struct TrainingView: View {
                 .padding(.horizontal, 4)
             
             if viewModel.currentDayWorkouts.isEmpty {
-                // Interactive Pill Card with Plus icon
                 Button {
                     HapticManager.impact(.light)
                     isAddWorkoutPresented = true
@@ -366,7 +342,6 @@ public struct TrainingView: View {
                         let isExpanded = (expandedWorkoutId == workout.id)
                         
                         VStack(spacing: 0) {
-                            // Top Row Card Header (Tappable, ZIndex: 2, Opaque)
                             Button {
                                 HapticManager.impact(.light)
                                 withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
@@ -425,19 +400,16 @@ public struct TrainingView: View {
                             .buttonStyle(.plain)
                             .zIndex(2)
                             
-                            // Expanded Workout Details & Action Buttons (ZIndex: 1, hides under header)
                             if isExpanded {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Divider()
                                         .padding(.horizontal, 2)
                                     
-                                    // Detail Summary Badges (Duration & Intensity, evenly proportioned horizontally)
                                     HStack(spacing: 12) {
                                         detailPill(icon: "clock.fill", title: "Duration", value: "\(workout.durationMinutes)m")
                                         detailPill(icon: "flame.fill", title: "Intensity", value: workout.intensity.rawValue)
                                     }
                                     
-                                    // Optional User Notes Display
                                     if !workout.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                         VStack(alignment: .leading, spacing: 4) {
                                             HStack(spacing: 5) {
@@ -461,9 +433,7 @@ public struct TrainingView: View {
                                         }
                                     }
                                     
-                                    // Edit & Delete Action Buttons (Styled with readiness theme & soft iOS HIG tint)
                                     HStack(spacing: 12) {
-                                        // Edit Button (Neutral Card Style with Blue Text & Icon)
                                         Button {
                                             HapticManager.impact(.light)
                                             editingWorkout = workout
@@ -494,7 +464,6 @@ public struct TrainingView: View {
                                         }
                                         .buttonStyle(.plain)
                                         
-                                        // Delete Button (Neutral Card Style - Matching unselected intensity card)
                                         Button {
                                             HapticManager.impact(.medium)
                                             workoutToDelete = workout

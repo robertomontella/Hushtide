@@ -6,14 +6,11 @@ public struct SleepView: View {
     private var sleepModel: SleepModel { viewModel.sleepModel }
     private var calendarModel: CalendarModel { viewModel.calendarModel }
     
-    // Calendar Top-Down Drop-Down State
     @State private var isCalendarOpen: Bool = false
     
-    // Time Picker Sheet State
     @State private var editingScheduleType: ScheduleEditType? = nil
     @State private var temporaryTimeSelection: Date = Date()
     
-    // Checkmarks Management Sheet & Edit Alert State
     @State private var isCheckmarksSheetPresented: Bool = false
     @State private var newCheckmarkText: String = ""
     @State private var editingCheckmarkItem: SleepCheckmarkItem? = nil
@@ -42,17 +39,15 @@ public struct SleepView: View {
         ZStack(alignment: .top) {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             
-            // MARK: - Sleep Screen Scrollable Content
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
-                    // MARK: - Header with Calendar Button in Top-Right Corner & Swipe Down Gesture
                     StandardHeaderView(
                         title: viewModel.sleepTitle,
                         dateSubtitle: calendarModel.currentDaySubtitle,
                         days: calendarModel.weekDays,
                         selectedDayIndex: calendarModel.selectedDayIndex,
-                        showProfileButton: true, // Enables top-right corner action button
-                        profileIconName: "calendar", // Renders calendar icon for date picker
+                        showProfileButton: true,
+                        profileIconName: "calendar",
                         onSelectDay: { index in
                             viewModel.selectDay(at: index)
                         },
@@ -64,7 +59,6 @@ public struct SleepView: View {
                         }
                     )
                     .simultaneousGesture(
-                        // Swipe gesture from top to bottom on header to reveal calendar
                         DragGesture(minimumDistance: 20)
                             .onEnded { value in
                                 if value.translation.height > 40 && abs(value.translation.width) < 50 && !isCalendarOpen {
@@ -76,9 +70,7 @@ public struct SleepView: View {
                             }
                     )
                     
-                    // Cards Container with Horizontal Margins
                     VStack(spacing: 12) {
-                        // 1. Main Sleep Gauge & Bedtime Schedule Card
                         SleepCardView(
                             progress: sleepModel.ringProgress,
                             durationText: sleepModel.sleepDurationFormatted,
@@ -95,7 +87,6 @@ public struct SleepView: View {
                             }
                         )
                         
-                        // 2. Checkmarks Recommendation Section (Editable & Creatable)
                         SleepCheckmarksView(
                             sectionTitle: sleepModel.checkmarksSectionTitle,
                             recommendationNote: sleepModel.checkmarksSubtitle,
@@ -116,7 +107,6 @@ public struct SleepView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Breathing room above tab bar
                     Spacer()
                         .frame(height: 20)
                 }
@@ -129,9 +119,7 @@ public struct SleepView: View {
                 }
             }
             
-            // MARK: - Top-Down Drop-Down Calendar (Slides from Top to Bottom)
             if isCalendarOpen {
-                // Dimmed Backdrop Overlay
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
@@ -141,7 +129,6 @@ public struct SleepView: View {
                     }
                     .transition(.opacity)
                 
-                // Calendar Panel Dropdown
                 calendarDropDownView
                     .transition(
                         .asymmetric(
@@ -152,19 +139,16 @@ public struct SleepView: View {
                     .zIndex(100)
             }
         }
-        // MARK: - Bedtime & Wake Time Picker Sheet
         .sheet(item: $editingScheduleType) { editType in
             timePickerSheet(for: editType)
                 .presentationDetents([.height(300)])
                 .presentationDragIndicator(.visible)
         }
-        // MARK: - Checkmarks Management Sheet
         .sheet(isPresented: $isCheckmarksSheetPresented) {
             checkmarksManagerSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        // MARK: - Edit Single Checkmark Alert
         .alert("Edit Checkmark", isPresented: $isEditSingleCheckmarkAlertPresented) {
             TextField("Checkmark description", text: $editingCheckmarkText)
             
@@ -184,7 +168,6 @@ public struct SleepView: View {
         } message: {
             Text("Modify the text or delete this checkmark recommendation.")
         }
-        // MARK: - Apple Health: reload the night every time the date or the data changes
         .task(id: healthReloadKey) {
             await loadSleepFromHealth()
         }
@@ -195,7 +178,6 @@ public struct SleepView: View {
         }
     }
     
-    // MARK: - Apple Health Sleep Loading
     private var healthReloadKey: String {
         let date = calendarModel.selectedDate.timeIntervalSince1970
         let sync = viewModel.health.lastSyncDate?.timeIntervalSince1970 ?? 0
@@ -213,10 +195,8 @@ public struct SleepView: View {
         viewModel.evaluateRecovery()
     }
     
-    // MARK: - Calendar Drop-Down Panel View (Slides Down from Top)
     private var calendarDropDownView: some View {
         VStack(spacing: 12) {
-            // Header Bar inside Dropdown
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Select Date")
@@ -230,7 +210,6 @@ public struct SleepView: View {
                 
                 Spacer()
                 
-                // Jump to Today Pill Button
                 Button {
                     HapticManager.impact(.light)
                     calendarModel.goToToday()
@@ -253,7 +232,6 @@ public struct SleepView: View {
                 }
                 .buttonStyle(.plain)
                 
-                // Close Circle Button
                 Button {
                     HapticManager.impact(.light)
                     withAppAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
@@ -269,7 +247,6 @@ public struct SleepView: View {
             .padding(.horizontal, 20)
             .padding(.top, 14)
             
-            // Graphical Calendar DatePicker
             DatePicker(
                 "Select Date",
                 selection: Binding(
@@ -286,7 +263,6 @@ public struct SleepView: View {
             .tint(sleepModel.accentColor)
             .padding(.horizontal, 14)
             
-            // Bottom Swipe Drag Handle Bar (Swipe down or up to dismiss)
             VStack(spacing: 4) {
                 Capsule()
                     .fill(Color(uiColor: .systemGray3))
@@ -316,11 +292,9 @@ public struct SleepView: View {
         .padding(.top, 6)
     }
     
-    // MARK: - Checkmarks Management Sheet
     private var checkmarksManagerSheet: some View {
         NavigationStack {
             List {
-                // Section: Create New Checkmark
                 Section(header: Text("Create New Checkmark")) {
                     HStack(spacing: 10) {
                         TextField("e.g. Turn off screens at 21:30", text: $newCheckmarkText)
@@ -341,7 +315,6 @@ public struct SleepView: View {
                     .padding(.vertical, 4)
                 }
                 
-                // Section: Existing Checkmarks
                 Section(header: Text("Existing Checkmarks (\(sleepModel.checkmarks.count))")) {
                     if sleepModel.checkmarks.isEmpty {
                         Text("No checkmarks. Add one above!")
@@ -350,7 +323,6 @@ public struct SleepView: View {
                     } else {
                         ForEach(sleepModel.checkmarks) { item in
                             HStack(spacing: 12) {
-                                // Checkbox icon
                                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
                                     .font(.system(size: 18))
                                     .foregroundColor(item.isChecked ? sleepModel.accentColor : .secondary)
@@ -358,14 +330,12 @@ public struct SleepView: View {
                                         sleepModel.toggleCheckmark(id: item.id)
                                     }
                                 
-                                // Checkmark Title Text
                                 Text(item.title)
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundColor(.primary)
                                 
                                 Spacer()
                                 
-                                // Quick Edit Button
                                 Button {
                                     editingCheckmarkItem = item
                                     editingCheckmarkText = item.title
@@ -409,7 +379,6 @@ public struct SleepView: View {
         newCheckmarkText = ""
     }
     
-    // MARK: - Interactive Time Picker Sheet
     private func openTimeEditor(for type: ScheduleEditType) {
         let calendar = Calendar.current
         var components = calendar.dateComponents([.year, .month, .day], from: Date())
@@ -418,7 +387,6 @@ public struct SleepView: View {
         let minute = (type == .inBed) ? sleepModel.inBedMinute : sleepModel.asleepMinute
         var period = (type == .inBed) ? sleepModel.inBedPeriod : sleepModel.asleepPeriod
         
-        // Provide sensible defaults if uninitialized
         if hour12 == 0 {
             if type == .inBed {
                 hour12 = 10

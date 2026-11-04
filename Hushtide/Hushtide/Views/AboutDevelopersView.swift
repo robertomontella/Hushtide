@@ -3,7 +3,6 @@ import SwiftUI
 public struct AboutDevelopersView: View {
     @Environment(\.colorScheme) private var colorScheme
     
-    // The 6 developers specified by the user
     private let developers: [DeveloperProfile] = [
         DeveloperProfile(
             name: "Francesco Micallo",
@@ -48,16 +47,9 @@ public struct AboutDevelopersView: View {
     public var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 20) {
-                // MARK: - Hero Banner (Made in Italy)
                 appHeroSection
-                
-                // MARK: - Section: THE DEVELOPMENT TEAM
                 developersSection
-                
-                // MARK: - Mission & Italian Heritage
                 heritageSection
-                
-                // MARK: - Technical & Build Info
                 buildInfoSection
                 
                 Spacer().frame(height: 30)
@@ -70,10 +62,8 @@ public struct AboutDevelopersView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
     
-    // MARK: - App Hero Section
     private var appHeroSection: some View {
         VStack(spacing: 14) {
-            // Italian Flag Badge
             HStack(spacing: 6) {
                 Text("🇮🇹")
                     .font(.system(size: 16))
@@ -94,7 +84,6 @@ public struct AboutDevelopersView: View {
                     )
             )
             
-            // App Icon Graphic
             Image("Untitled-iOS-Default-1024@1x")
                 .resizable()
                 .scaledToFit()
@@ -133,7 +122,6 @@ public struct AboutDevelopersView: View {
         )
     }
     
-    // MARK: - Developers Section
     private var developersSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -170,7 +158,6 @@ public struct AboutDevelopersView: View {
     @ViewBuilder
     private func developerRow(developer: DeveloperProfile) -> some View {
         HStack(spacing: 14) {
-            // Vibrant Initials Avatar
             ZStack {
                 Circle()
                     .fill(developer.accentColor.opacity(0.15))
@@ -197,7 +184,6 @@ public struct AboutDevelopersView: View {
         .padding(.vertical, 12)
     }
     
-    // MARK: - Heritage & Philosophy
     private var heritageSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("MISSION & ROOTS")
@@ -230,7 +216,6 @@ public struct AboutDevelopersView: View {
         }
     }
     
-    // MARK: - Build Info Section
     private var buildInfoSection: some View {
         VStack(spacing: 6) {
             Text("Crafted with Swift and SwiftUI in Italy 🇮🇹")
@@ -246,7 +231,6 @@ public struct AboutDevelopersView: View {
     }
 }
 
-// MARK: - Developer Profile Model
 private struct DeveloperProfile: Identifiable {
     let id = UUID()
     let name: String

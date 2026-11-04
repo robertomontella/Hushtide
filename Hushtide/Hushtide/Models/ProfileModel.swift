@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - Navigation Tabs
 public enum AppTab: Int, CaseIterable, Identifiable {
     case summary = 0
     case sleep = 1
@@ -25,7 +24,6 @@ public enum AppTab: Int, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Summary Metric Tabs (Quality, Sleep, Training)
 public enum SummaryMetricTab: String, CaseIterable, Identifiable {
     case quality = "Quality"
     case sleep = "Sleep"
@@ -34,7 +32,6 @@ public enum SummaryMetricTab: String, CaseIterable, Identifiable {
     public var id: String { rawValue }
 }
 
-// MARK: - Day Item
 public struct DayItem: Identifiable, Hashable {
     public let id: Int
     public let letter: String
@@ -51,7 +48,6 @@ public struct DayItem: Identifiable, Hashable {
     }
 }
 
-// MARK: - Intensity Level
 public enum IntensityLevel: String, CaseIterable, Identifiable, Codable {
     case rest = "Rest"
     case light = "Light"
@@ -79,9 +75,7 @@ public enum IntensityLevel: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-// MARK: - Profile Option Catalogs
 public struct ProfileOptions {
-    /// The main sports categories (applied across Profile and Add Workout)
     public static let sports = [
         "Running",
         "Cycling",
@@ -151,7 +145,6 @@ public struct ProfileOptions {
     }
 }
 
-// MARK: - Metric Item
 public struct SecondaryMetric: Identifiable {
     public let id = UUID()
     public var title: String
@@ -163,10 +156,8 @@ public struct SecondaryMetric: Identifiable {
     }
 }
 
-// MARK: - Logged Workout Item
 public struct LoggedWorkout: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
-    /// UUID of the matching HKWorkout in Apple Health (nil = only stored in the app)
     public var healthKitUUID: UUID?
     public var sportType: String
     public var intensity: IntensityLevel

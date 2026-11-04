@@ -33,17 +33,14 @@ public struct SummaryMetricCardView: View {
     
     public var body: some View {
         VStack(spacing: 6) {
-            // Colored section title matching the concentric ring
             Text(title)
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(titleColor)
             
-            // Primary highlighted metric value
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
             
-            // Contextual subtitle (e.g., average rating, goal progress)
             Text(subtitle)
                 .font(.system(size: 11, weight: appHighContrast ? .semibold : .regular))
                 .foregroundColor(appHighContrast ? .primary : .secondary)

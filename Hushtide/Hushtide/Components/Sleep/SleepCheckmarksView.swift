@@ -31,7 +31,6 @@ public struct SleepCheckmarksView: View {
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Section Title with Add Button Above
             HStack(alignment: .center) {
                 Text(sectionTitle)
                     .font(.system(size: 22, weight: .bold))
@@ -62,9 +61,7 @@ public struct SleepCheckmarksView: View {
             }
             .padding(.horizontal, 4)
             
-            // Checkmarks Container Card (Fixed-size Pill with ScrollView)
             VStack(alignment: .leading, spacing: 10) {
-                // Scrollable Checkmarks list with fixed height boundary
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 10) {
                         if checkmarks.isEmpty {
@@ -75,12 +72,10 @@ public struct SleepCheckmarksView: View {
                         } else {
                             ForEach(checkmarks) { item in
                                 HStack(spacing: 14) {
-                                    // Interactive Checkbox Button
                                     Button {
                                         onToggle(item.id)
                                     } label: {
                                         HStack(spacing: 14) {
-                                            // Purple Rounded Square Checkbox
                                             ZStack {
                                                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                                                     .fill(item.isChecked ? accentColor : Color.clear)
@@ -98,7 +93,6 @@ public struct SleepCheckmarksView: View {
                                                 }
                                             }
                                             
-                                            // Checkmark Label
                                             Text(item.title)
                                                 .font(.system(size: 15, weight: appHighContrast ? .black : .bold))
                                                 .foregroundColor(.primary)
@@ -110,7 +104,6 @@ public struct SleepCheckmarksView: View {
                                     
                                     Spacer()
                                     
-                                    // Edit Checkmark Button
                                     Button {
                                         HapticManager.impact(.light)
                                         onEditCheckmark?(item)
@@ -130,7 +123,6 @@ public struct SleepCheckmarksView: View {
                 }
                 .frame(maxHeight: .infinity)
                 
-                // Explanatory Recommendation Note
                 Text(recommendationNote)
                     .font(.system(size: 12, weight: appHighContrast ? .semibold : .regular))
                     .foregroundColor(appHighContrast ? .primary : .secondary)
@@ -138,7 +130,7 @@ public struct SleepCheckmarksView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .frame(height: 140) // Fixed size regardless of the number of checkmarks
+            .frame(height: 140)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(Color(uiColor: .secondarySystemGroupedBackground))

@@ -39,7 +39,6 @@ public struct StandardHeaderView: View {
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // MARK: - Title Bar & Optional Profile Icon
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -53,7 +52,6 @@ public struct StandardHeaderView: View {
                 
                 Spacer()
                 
-                // Profile button EXCLUSIVELY in Summary screen (Liquid Glass style)
                 if showProfileButton {
                     Button {
                         HapticManager.impact(.light)
@@ -80,7 +78,6 @@ public struct StandardHeaderView: View {
             }
             .padding(.horizontal, 20)
             
-            // MARK: - Day Selector Pill Container (M  T  W  T  F  S  S)
             if showDaySelector {
                 HStack(spacing: 0) {
                     ForEach(Array(days.enumerated()), id: \.element.id) { index, day in

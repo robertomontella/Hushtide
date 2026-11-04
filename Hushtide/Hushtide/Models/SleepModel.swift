@@ -1,7 +1,6 @@
 import SwiftUI
 import Observation
 
-// MARK: - Meridiem Period (AM / PM)
 public enum MeridiemPeriod: String, CaseIterable, Identifiable, Codable {
     case am = "AM"
     case pm = "PM"
@@ -9,7 +8,6 @@ public enum MeridiemPeriod: String, CaseIterable, Identifiable, Codable {
     public var id: String { rawValue }
 }
 
-// MARK: - Sleep Checkmark Item
 public struct SleepCheckmarkItem: Identifiable, Hashable, Codable {
     public let id: UUID
     public var title: String
@@ -36,7 +34,6 @@ public struct SleepCheckmarkItem: Identifiable, Hashable, Codable {
     }
 }
 
-// MARK: - Day Sleep Record
 public struct DaySleepRecord: Hashable, Codable {
     public var inBedHour: Int
     public var inBedMinute: Int
@@ -88,17 +85,13 @@ public struct DaySleepRecord: Hashable, Codable {
     }
 }
 
-// MARK: - Sleep Model Observable State
 @Observable
 public final class SleepModel {
     
-    // Callback invoked whenever sleep duration, bedtime, goal, or checkmarks are modified
     public var onStateChanged: (() -> Void)? = nil
     
-    // MARK: - Shared Calendar Model Reference
     public var calendarModel: CalendarModel? = nil
     
-    // MARK: - Apple Health Sync State
     public var isAppleHealthSynced: Bool = false {
         didSet {
             if isAppleHealthSynced {
@@ -107,14 +100,13 @@ public final class SleepModel {
         }
     }
     
-    // MARK: - Theme & Header
     public var title: String = "Sleep"
     public var currentDaySubtitle: String {
         calendarModel?.currentDaySubtitle ?? "Today"
     }
     public var selectedDayIndex: Int = 0
     
-    // MARK: - Future Day Check Helpers
+    // Checks whether the weekday index represents a future calendar day
     public func isDayIndexInFuture(_ index: Int) -> Bool {
         if let calendarModel {
             return calendarModel.isDayIndexInFuture(index)
@@ -135,12 +127,10 @@ public final class SleepModel {
         return weeklyRecords[selectedDayIndex].isManualSchedule
     }
     
-    // Accent Color: royal indigo (#535DFF) matching design mockup
     public var accentColor: Color = Color(red: 0.33, green: 0.36, blue: 1.0)
     public var trackColor: Color = Color(red: 0.83, green: 0.83, blue: 0.95)
     
-    // MARK: - Sleep Goal / Target (Configurable by user)
-    public var targetSleepHours: Double = 8.0 // in hours (e.g. 7.5 = 7h 30m, 8.0 = 8h)
+    public var targetSleepHours: Double = 8.0
     
     public var targetDurationFormatted: String {
         let targetH = Int(targetSleepHours)
@@ -162,11 +152,8 @@ public final class SleepModel {
         }
     }
     
-    // MARK: - Weekly Sleep Tracking (Current Week: Mon - Sun)
-    // When opened without syncing Apple Health, all values default to zero
     public var weeklySleepMinutes: [Int] = [0, 0, 0, 0, 0, 0, 0]
     
-    // 7-day individual records for full schedule and checkmark persistence (defaults to all unchecked)
     public var weeklyRecords: [DaySleepRecord] = [
         DaySleepRecord(inBedHour: 0, inBedMinute: 0, inBedPeriod: .pm, asleepHour: 0, asleepMinute: 0, asleepPeriod: .am, checkmarks: [
             SleepCheckmarkItem(title: "Go to bed at 22:00", isChecked: false),
@@ -198,7 +185,7 @@ public final class SleepModel {
         ])
     ]
     
-    // MARK: - Dynamic Sleep Duration Calculations for Any Day
+    // Calculates total sleep duration in minutes for a specific weekday index
     public func durationMinutes(for dayIndex: Int) -> Int {
         guard dayIndex >= 0 && dayIndex < weeklyRecords.count else { return 0 }
         if isDayIndexInFuture(dayIndex) || !isAppleHealthSynced { return 0 }
@@ -275,7 +262,6 @@ public final class SleepModel {
         return min(1.0, max(0.0, Double(weeklyAverageMinutes) / targetMins))
     }
     
-    // MARK: - Bedtime & Wakeup Schedule (Defaults to uninitialized / 0 until synced)
     public var inBedHour: Int = 0
     public var inBedMinute: Int = 0
     public var inBedPeriod: MeridiemPeriod = .pm
@@ -304,12 +290,10 @@ public final class SleepModel {
         return "\(asleepTimeFormatted) \(asleepPeriod.rawValue)"
     }
     
-    // MARK: - Apple Health Data
-    /// Real minutes asleep read from Apple Health (nil = computed from the schedule)
     public var healthAsleepMinutes: Int? = nil
     public var isFromAppleHealth: Bool { healthAsleepMinutes != nil }
     
-    /// Fills bedtime / wake-up time and duration with a night read from HealthKit.
+    // Populates bedtime, wake time, and duration from a HealthKit sleep night
     public func apply(night: SleepNight?) {
         guard let night else { return }
         let calendar = Calendar.current
@@ -332,17 +316,16 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Converts 24-hour time into 12-hour format with AM or PM period
     private static func to12h(_ hour24: Int) -> (Int, MeridiemPeriod) {
         let period: MeridiemPeriod = hour24 >= 12 ? .pm : .am
         let h = hour24 % 12
         return (h == 0 ? 12 : h, period)
     }
     
-    // MARK: - Dynamic Sleep Duration Calculations
     public var durationMinutes: Int {
         if isSelectedDayInFuture || !isAppleHealthSynced { return 0 }
         
-        // If the user manually edited this day's schedule, calculate duration directly from bedtime & wake time
         if selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count && weeklyRecords[selectedDayIndex].isManualSchedule {
             guard inBedHour > 0 || asleepHour > 0 else { return 0 }
             let bedMins = toMinutesFromMidnight(hour: inBedHour, minute: inBedMinute, period: inBedPeriod)
@@ -354,14 +337,12 @@ public final class SleepModel {
             }
         }
         
-        // Untouched Apple Health measured sleep stage minutes (asleep time)
         if let healthAsleepMinutes, healthAsleepMinutes > 0 { return healthAsleepMinutes }
         if selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count,
            let recordMins = weeklyRecords[selectedDayIndex].healthAsleepMinutes, recordMins > 0 {
             return recordMins
         }
         
-        // Bedtime & wake time schedule calculation
         guard inBedHour > 0 || asleepHour > 0 else {
             if selectedDayIndex >= 0 && selectedDayIndex < weeklySleepMinutes.count,
                weeklySleepMinutes[selectedDayIndex] > 0 {
@@ -397,7 +378,6 @@ public final class SleepModel {
         }
     }
     
-    /// Visual fraction of the ring (0.0 ... 1.0) proportional to user target sleep
     public var ringProgress: Double {
         guard isAppleHealthSynced && durationMinutes > 0 else { return 0.0 }
         let targetMins = targetSleepHours * 60.0
@@ -405,14 +385,13 @@ public final class SleepModel {
         return min(1.0, max(0.0, Double(durationMinutes) / targetMins))
     }
     
-    // MARK: - Storage Keys
     private enum StorageKeys {
         static let lastCheckmarksResetDate = "RecoveryApp_lastCheckmarksResetDate"
         static let savedWeeklyRecords = "RecoveryApp_savedWeeklySleepRecords"
         static let targetSleepHours = "RecoveryApp_targetSleepHours"
     }
     
-    // MARK: - Persistent Storage Helpers
+    // Persists weekly sleep records to UserDefaults
     public func saveWeeklyRecordsToStorage() {
         if let encoded = try? JSONEncoder().encode(weeklyRecords) {
             UserDefaults.standard.set(encoded, forKey: StorageKeys.savedWeeklyRecords)
@@ -420,6 +399,7 @@ public final class SleepModel {
     }
     
     @discardableResult
+    // Loads saved weekly sleep records from UserDefaults
     public func restoreWeeklyRecordsFromStorage() -> Bool {
         if let data = UserDefaults.standard.data(forKey: StorageKeys.savedWeeklyRecords),
            let decoded = try? JSONDecoder().decode([DaySleepRecord].self, from: data),
@@ -431,7 +411,6 @@ public final class SleepModel {
         return false
     }
     
-    // MARK: - Recommendations & Checkmarks (Defaults to false: refreshed fresh each day)
     public var checkmarksSectionTitle: String = "Checkmarks"
     public var checkmarksSubtitle: String = "Based on your weekly workouts and daily routine, we recommend that you:"
     
@@ -440,7 +419,6 @@ public final class SleepModel {
         SleepCheckmarkItem(title: "Do not drink caffeine after 4:00", isChecked: false, isManuallySet: false)
     ]
     
-    // MARK: - Daily Checkmarks Reset
     public var lastCheckmarksResetDate: Date? {
         get {
             UserDefaults.standard.object(forKey: StorageKeys.lastCheckmarksResetDate) as? Date
@@ -450,7 +428,7 @@ public final class SleepModel {
         }
     }
     
-    /// Verifies if a new day has started; if so, resets all checkmarks to false.
+    // Resets sleep checkmarks if a new day has started
     public func checkAndPerformDailyResetIfNeeded() {
         let calendar = Calendar.current
         if let lastReset = lastCheckmarksResetDate {
@@ -462,7 +440,7 @@ public final class SleepModel {
         }
     }
     
-    /// Forces resetting all checkmarks to false and updates timestamp to today.
+    // Clears all checkmarks for the current day and updates timestamp
     public func resetCheckmarksForNewDay() {
         for i in 0..<checkmarks.count {
             checkmarks[i].isChecked = false
@@ -479,31 +457,27 @@ public final class SleepModel {
         onStateChanged?()
     }
     
-    // MARK: - Bedtime Checkmark Auto-Evaluation
-    /// If sleep data indicates going to bed late (at 23:00 or after 22:15), uncheck the box unless manually set by the user.
+    // Checks whether bedtime meets target and updates checkmark compliance
     public func updateBedtimeCheckmarkCompliance() {
         guard let index = checkmarks.firstIndex(where: {
             $0.title.localizedCaseInsensitiveContains("22:00") ||
             $0.title.localizedCaseInsensitiveContains("bed at 22")
         }) else { return }
         
-        // Never override a checkmark that was explicitly toggled by the user
         guard !checkmarks[index].isManuallySet else { return }
         
-        // If uninitialized / 0 / no bedtime set, do not force checkmark to true
         guard inBedHour > 0 || asleepHour > 0 else { return }
         
         var hour24 = inBedHour % 12
         if inBedPeriod == .pm { hour24 += 12 }
         
-        // Bedtime at 23:00 or later (including past midnight) does NOT meet 22:00 target
         let isLateBedtime = (hour24 >= 23 || (hour24 == 22 && inBedMinute > 15) || hour24 < 12)
         if isLateBedtime {
             checkmarks[index].isChecked = false
         }
     }
     
-    // MARK: - Reset to Zero State
+    // Resets all sleep metrics, schedules, and checkmarks to zero
     public func resetToZero() {
         isAppleHealthSynced = false
         healthAsleepMinutes = nil
@@ -533,7 +507,6 @@ public final class SleepModel {
         UserDefaults.standard.removeObject(forKey: StorageKeys.savedWeeklyRecords)
     }
     
-    // MARK: - Initializer
     public init() {
         if let savedGoal = UserDefaults.standard.object(forKey: StorageKeys.targetSleepHours) as? Double, savedGoal > 0 {
             self.targetSleepHours = savedGoal
@@ -543,7 +516,7 @@ public final class SleepModel {
         updateBedtimeCheckmarkCompliance()
     }
     
-    // MARK: - Schedule & Goal Actions
+    // Updates bedtime schedule and recalculates sleep duration
     public func setInBed(hour: Int, minute: Int, period: MeridiemPeriod) {
         healthAsleepMinutes = nil
         inBedHour = max(1, min(12, hour))
@@ -559,6 +532,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Updates wake-up schedule and recalculates sleep duration
     public func setAsleep(hour: Int, minute: Int, period: MeridiemPeriod) {
         healthAsleepMinutes = nil
         asleepHour = max(1, min(12, hour))
@@ -573,6 +547,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Updates bedtime AM or PM period
     public func setInBedPeriod(_ period: MeridiemPeriod) {
         guard inBedPeriod != period else { return }
         HapticManager.impact(.light)
@@ -586,6 +561,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Updates wake-up AM or PM period
     public func setAsleepPeriod(_ period: MeridiemPeriod) {
         guard asleepPeriod != period else { return }
         HapticManager.impact(.light)
@@ -598,14 +574,17 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Toggles bedtime between AM and PM
     public func toggleInBedPeriod() {
         setInBedPeriod((inBedPeriod == .am) ? .pm : .am)
     }
     
+    // Toggles wake-up time between AM and PM
     public func toggleAsleepPeriod() {
         setAsleepPeriod((asleepPeriod == .am) ? .pm : .am)
     }
     
+    // Updates sleep target hours and persists to storage
     public func setTargetSleepHours(_ hours: Double) {
         HapticManager.impact(.light)
         
@@ -616,7 +595,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
-    // MARK: - Checkmark Actions
+    // Toggles completion status of a sleep checkmark item
     public func toggleCheckmark(id: UUID) {
         HapticManager.impact(.light)
         
@@ -630,6 +609,7 @@ public final class SleepModel {
         }
     }
     
+    // Adds a new custom sleep hygiene checkmark
     public func addCheckmark(title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -642,6 +622,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Updates the title of an existing checkmark item
     public func updateCheckmark(id: UUID, newTitle: String) {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -654,6 +635,7 @@ public final class SleepModel {
         }
     }
     
+    // Removes a sleep checkmark item by identifier
     public func deleteCheckmark(id: UUID) {
         HapticManager.impact(.medium)
         
@@ -664,6 +646,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Deletes sleep checkmarks at specified index offsets
     public func deleteCheckmarks(at offsets: IndexSet) {
         withAppAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             checkmarks.remove(atOffsets: offsets)
@@ -672,6 +655,7 @@ public final class SleepModel {
         onStateChanged?()
     }
     
+    // Switches the active day and loads its sleep schedule
     public func selectDay(at index: Int) {
         guard index >= 0 && index < weeklyRecords.count else { return }
         selectedDayIndex = index
@@ -685,7 +669,6 @@ public final class SleepModel {
         checkmarks = record.checkmarks
         healthAsleepMinutes = record.isManualSchedule ? nil : record.healthAsleepMinutes
         
-        // If times are 0 but we have sleep minutes, construct sensible bedtime & wake-up time
         if (inBedHour == 0 && asleepHour == 0), let minutes = (healthAsleepMinutes ?? (weeklySleepMinutes[index] > 0 ? weeklySleepMinutes[index] : nil)), minutes > 0 {
             let wakeHour = 7
             let wakeMinute = 0
@@ -705,6 +688,7 @@ public final class SleepModel {
         }
     }
     
+    // Syncs currently displayed sleep times into the active day record
     private func syncCurrentToRecord(manual: Bool = false) {
         guard selectedDayIndex >= 0 && selectedDayIndex < weeklyRecords.count else { return }
         let isManual = manual || weeklyRecords[selectedDayIndex].isManualSchedule
@@ -726,7 +710,7 @@ public final class SleepModel {
         saveWeeklyRecordsToStorage()
     }
     
-    /// Constructs a valid SleepNight for the currently selected day to evaluate recovery dynamically.
+    // Builds a sleep night model for the selected day
     public func currentDaySleepNight() -> SleepNight {
         let asleepMins = durationMinutes
         let day = calendarModel?.selectedDate ?? Date()
@@ -743,7 +727,7 @@ public final class SleepModel {
         }
         
         var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday
+        calendar.firstWeekday = 2
         let now = Date()
         let today = calendar.startOfDay(for: now)
         let weekday = calendar.component(.weekday, from: now)
@@ -760,7 +744,6 @@ public final class SleepModel {
         if asleepPeriod == .pm && wakeHour24 < 12 { wakeHour24 += 12 }
         if asleepPeriod == .am && wakeHour24 == 12 { wakeHour24 = 0 }
         
-        // If times are unconfigured but we have sleep minutes, anchor to standard 7:00 AM wake time
         if bedHour24 == 0 && wakeHour24 == 0 && asleepMins > 0 {
             wakeHour24 = 7
             let wakeTotal = 7 * 60
@@ -787,7 +770,7 @@ public final class SleepModel {
         )
     }
     
-    // MARK: - Private Time Utilities
+    // Converts 12-hour time components to total minutes from midnight
     private func toMinutesFromMidnight(hour: Int, minute: Int, period: MeridiemPeriod) -> Int {
         var h = hour % 12
         if period == .pm {

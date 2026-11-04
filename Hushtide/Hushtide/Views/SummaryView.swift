@@ -3,16 +3,14 @@ import SwiftUI
 public struct SummaryView: View {
     @Bindable public var viewModel: TrainingModel
     
-    // Target Editing Sheet State
     @State private var editingTargetMetric: SummaryMetricTab? = nil
     @State private var temporaryQualityTarget: Double = 85.0
     @State private var temporarySleepGoal: Double = 8.0
     @State private var temporaryTrainingDailyTarget: Double = 30.0
     
-    // Metric Accent Colors matching the rings and design specifications
-    private let qualityColor = Color(red: 3/255.0, green: 199/255.0, blue: 190/255.0)  // Mint / Teal
-    private let sleepColor = Color(red: 88/255.0, green: 86/255.0, blue: 215/255.0)    // Indigo / Purple
-    private let trainingColor = Color(red: 1/255.0, green: 113/255.0, blue: 227/255.0) // System Electric Blue
+    private let qualityColor = Color(red: 3/255.0, green: 199/255.0, blue: 190/255.0)
+    private let sleepColor = Color(red: 88/255.0, green: 86/255.0, blue: 215/255.0)
+    private let trainingColor = Color(red: 1/255.0, green: 113/255.0, blue: 227/255.0)
     
     public init(viewModel: TrainingModel) {
         self.viewModel = viewModel
@@ -20,9 +18,6 @@ public struct SummaryView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // MARK: - 1. Top Header Section
-            // Includes "Summary" title, current date subtitle, and profile avatar button.
-            // The weekday pill selector is hidden in Summary as shown in design.
             StandardHeaderView(
                 title: viewModel.summaryTitle,
                 dateSubtitle: viewModel.currentDaySubtitle,
@@ -37,10 +32,8 @@ public struct SummaryView: View {
             .padding(.top, 4)
             .padding(.bottom, 2)
             
-            // MARK: - 2. Scrollable Body Content
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
-                    // Concentric Circular Rings (Quality, Sleep, Training)
                     SummaryRingsView(
                         qualityProgress: viewModel.summaryQualityProgress,
                         sleepProgress: viewModel.summarySleepProgress,
@@ -48,15 +41,12 @@ public struct SummaryView: View {
                     )
                     .padding(.top, 0)
                     
-                    // 3 Metric Cards Row (Quality, Sleep, Training) - Interactive Buttons
                     metricCardsRow
                     
-                    // Dynamic Detail Chart (Quality %, Sleep Target, Training Minutes)
                     SummaryDetailChartView(
                         viewModel: viewModel
                     )
                     
-                    // Bottom spacing to ensure clean clearance above the tab bar
                     Spacer()
                         .frame(height: 20)
                 }
@@ -70,7 +60,6 @@ public struct SummaryView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
-        // MARK: - Target Editing Sheet
         .sheet(item: $editingTargetMetric) { metric in
             switch metric {
             case .quality:
@@ -89,12 +78,8 @@ public struct SummaryView: View {
         }
     }
     
-    // MARK: - Metric Cards Row (Interactive Buttons)
-    /// Displays Quality, Sleep, and Training metric cards side-by-side with equal width.
-    /// Single click switches the detailed chart below; changes must only be made by double-clicking on the cards.
     private var metricCardsRow: some View {
         HStack(spacing: 12) {
-            // Quality Card (Mint / Teal)
             SummaryMetricCardView(
                 title: "Quality",
                 titleColor: qualityColor,
@@ -110,7 +95,6 @@ public struct SummaryView: View {
                 }
             )
             
-            // Sleep Card (Indigo / Purple)
             SummaryMetricCardView(
                 title: "Sleep",
                 titleColor: sleepColor,
@@ -126,7 +110,6 @@ public struct SummaryView: View {
                 }
             )
             
-            // Training Card (Electric Blue)
             SummaryMetricCardView(
                 title: "Training",
                 titleColor: trainingColor,
@@ -144,7 +127,6 @@ public struct SummaryView: View {
         }
     }
     
-    // MARK: - Open Target Editor Action
     private func openTargetEditor(for metric: SummaryMetricTab) {
         switch metric {
         case .quality:
@@ -157,7 +139,6 @@ public struct SummaryView: View {
         editingTargetMetric = metric
     }
     
-    // MARK: - Quality Target Picker Sheet
     private var qualityTargetPickerSheet: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -178,7 +159,6 @@ public struct SummaryView: View {
                 }
                 .padding(.top, 8)
                 
-                // Presets
                 HStack(spacing: 8) {
                     qualityPresetButton(percentage: 70)
                     qualityPresetButton(percentage: 75)
@@ -189,7 +169,6 @@ public struct SummaryView: View {
                 }
                 .padding(.horizontal, 8)
                 
-                // Slider
                 VStack(spacing: 8) {
                     Slider(
                         value: $temporaryQualityTarget,
@@ -258,7 +237,6 @@ public struct SummaryView: View {
         .buttonStyle(.plain)
     }
     
-    // MARK: - Sleep Goal Picker Sheet (Synchronized with SleepModel)
     private var sleepGoalPickerSheet: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -282,7 +260,6 @@ public struct SummaryView: View {
                 }
                 .padding(.top, 8)
                 
-                // Presets
                 HStack(spacing: 8) {
                     sleepPresetButton(hours: 7.0, label: "7h")
                     sleepPresetButton(hours: 7.5, label: "7h 30m")
@@ -292,7 +269,6 @@ public struct SummaryView: View {
                 }
                 .padding(.horizontal, 8)
                 
-                // Slider
                 VStack(spacing: 8) {
                     Slider(
                         value: $temporarySleepGoal,
@@ -361,7 +337,6 @@ public struct SummaryView: View {
         .buttonStyle(.plain)
     }
     
-    // MARK: - Training Target Picker Sheet
     private var trainingTargetPickerSheet: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -382,7 +357,6 @@ public struct SummaryView: View {
                 }
                 .padding(.top, 8)
                 
-                // Presets
                 HStack(spacing: 8) {
                     trainingPresetButton(minutes: 15)
                     trainingPresetButton(minutes: 20)
@@ -393,7 +367,6 @@ public struct SummaryView: View {
                 }
                 .padding(.horizontal, 8)
                 
-                // Slider
                 VStack(spacing: 8) {
                     Slider(
                         value: $temporaryTrainingDailyTarget,

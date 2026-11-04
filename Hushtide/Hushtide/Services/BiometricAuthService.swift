@@ -4,6 +4,7 @@ import LocalAuthentication
 @MainActor
 public enum BiometricAuthService {
     
+    // Authenticates the user using Face ID or device passcode for HealthKit access
     public static func authenticateForHealthSync(
         reason: String = "Face ID is required to sync Apple Health data. If Face ID is not recognized, enter your phone PIN."
     ) async -> Bool {
@@ -14,8 +15,6 @@ public enum BiometricAuthService {
         var authError: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) else {
             #if targetEnvironment(simulator)
-            // On simulator environments where Face ID / passcode may not be enrolled in settings,
-            // allow development testing while logging clearly.
             print("[BiometricAuthService] Simulator fallback: biometrics not enrolled.")
             return true
             #else

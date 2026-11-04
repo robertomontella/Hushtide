@@ -1,11 +1,3 @@
-//
-//  HapticManager.swift
-//  RecoveryApp
-//
-//  Central manager for tactile haptic feedback and accessibility motion preferences.
-//  Allows the user to enable or disable all haptics and reduce motion app-wide.
-//
-
 import UIKit
 import SwiftUI
 
@@ -13,7 +5,6 @@ public final class HapticManager {
     public static let hapticsKey = "RecoveryApp_isHapticsEnabled"
     public static let reduceMotionKey = "RecoveryApp_isReduceMotionEnabled"
     
-    /// Global flag observed by all haptic triggers
     public static var isHapticsEnabled: Bool {
         get {
             if UserDefaults.standard.object(forKey: hapticsKey) == nil {
@@ -26,7 +17,6 @@ public final class HapticManager {
         }
     }
     
-    /// Global flag observed by motion and animation systems
     public static var isReduceMotionEnabled: Bool {
         get {
             UserDefaults.standard.bool(forKey: reduceMotionKey)
@@ -36,14 +26,14 @@ public final class HapticManager {
         }
     }
     
-    /// Initializes stored preferences and hooks UIKit feedback generators
+    // Initializes stored preferences and enables feedback generator swizzling
     public static func initialize() {
         _ = isHapticsEnabled
         _ = isReduceMotionEnabled
         enableSwizzling()
     }
     
-    /// Explicit trigger for impact haptics (guarded by isHapticsEnabled)
+    // Triggers impact haptic feedback with the specified style
     public static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light) {
         guard isHapticsEnabled else { return }
         let generator = UIImpactFeedbackGenerator(style: style)
@@ -51,7 +41,7 @@ public final class HapticManager {
         generator.impactOccurred()
     }
     
-    /// Explicit trigger for impact haptics with intensity (guarded by isHapticsEnabled)
+    // Triggers impact haptic feedback with custom intensity
     public static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light, intensity: CGFloat) {
         guard isHapticsEnabled else { return }
         let generator = UIImpactFeedbackGenerator(style: style)
@@ -59,7 +49,7 @@ public final class HapticManager {
         generator.impactOccurred(intensity: intensity)
     }
     
-    /// Explicit trigger for notification haptics (guarded by isHapticsEnabled)
+    // Triggers notification haptic feedback of the given type
     public static func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         guard isHapticsEnabled else { return }
         let generator = UINotificationFeedbackGenerator()
@@ -67,7 +57,7 @@ public final class HapticManager {
         generator.notificationOccurred(type)
     }
     
-    /// Explicit trigger for selection haptics (guarded by isHapticsEnabled)
+    // Triggers selection change haptic feedback
     public static func selection() {
         guard isHapticsEnabled else { return }
         let generator = UISelectionFeedbackGenerator()
@@ -75,14 +65,13 @@ public final class HapticManager {
         generator.selectionChanged()
     }
     
-    // MARK: - Safe Swizzling to enforce Haptics toggle globally
     private static var hasSwizzled = false
     
+    // Swizzles UIKit feedback generator methods to enforce the global haptics toggle
     private static func enableSwizzling() {
         guard !hasSwizzled else { return }
         hasSwizzled = true
         
-        // 1. Swizzle UIImpactFeedbackGenerator.impactOccurred()
         let impactOriginal = #selector(UIImpactFeedbackGenerator.impactOccurred as (UIImpactFeedbackGenerator) -> () -> Void)
         let impactSwizzled = #selector(UIImpactFeedbackGenerator.app_impactOccurred as (UIImpactFeedbackGenerator) -> () -> Void)
         if let original = class_getInstanceMethod(UIImpactFeedbackGenerator.self, impactOriginal),
@@ -90,7 +79,6 @@ public final class HapticManager {
             method_exchangeImplementations(original, swizzled)
         }
         
-        // 2. Swizzle UIImpactFeedbackGenerator.impactOccurred(intensity:)
         let impactIntensityOriginal = #selector(UIImpactFeedbackGenerator.impactOccurred(intensity:))
         let impactIntensitySwizzled = #selector(UIImpactFeedbackGenerator.app_impactOccurred(intensity:))
         if let original = class_getInstanceMethod(UIImpactFeedbackGenerator.self, impactIntensityOriginal),
@@ -98,7 +86,6 @@ public final class HapticManager {
             method_exchangeImplementations(original, swizzled)
         }
         
-        // 3. Swizzle UINotificationFeedbackGenerator.notificationOccurred(_:)
         let notifOriginal = #selector(UINotificationFeedbackGenerator.notificationOccurred(_:))
         let notifSwizzled = #selector(UINotificationFeedbackGenerator.app_notificationOccurred(_:))
         if let original = class_getInstanceMethod(UINotificationFeedbackGenerator.self, notifOriginal),
@@ -106,7 +93,6 @@ public final class HapticManager {
             method_exchangeImplementations(original, swizzled)
         }
         
-        // 4. Swizzle UISelectionFeedbackGenerator.selectionChanged()
         let selectOriginal = #selector(UISelectionFeedbackGenerator.selectionChanged as (UISelectionFeedbackGenerator) -> () -> Void)
         let selectSwizzled = #selector(UISelectionFeedbackGenerator.app_selectionChanged)
         if let original = class_getInstanceMethod(UISelectionFeedbackGenerator.self, selectOriginal),
@@ -116,14 +102,15 @@ public final class HapticManager {
     }
 }
 
-// MARK: - Swizzled UIKit Extensions
 extension UIImpactFeedbackGenerator {
+    // Intercepts impact feedback and suppresses it when haptics are disabled
     @objc dynamic func app_impactOccurred() {
         if HapticManager.isHapticsEnabled {
             self.app_impactOccurred()
         }
     }
     
+    // Intercepts impact feedback with intensity and suppresses it when disabled
     @objc dynamic func app_impactOccurred(intensity: CGFloat) {
         if HapticManager.isHapticsEnabled {
             self.app_impactOccurred(intensity: intensity)
@@ -132,6 +119,7 @@ extension UIImpactFeedbackGenerator {
 }
 
 extension UINotificationFeedbackGenerator {
+    // Intercepts notification feedback and suppresses it when disabled
     @objc dynamic func app_notificationOccurred(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         if HapticManager.isHapticsEnabled {
             self.app_notificationOccurred(type)
@@ -140,6 +128,7 @@ extension UINotificationFeedbackGenerator {
 }
 
 extension UISelectionFeedbackGenerator {
+    // Intercepts selection change feedback and suppresses it when disabled
     @objc dynamic func app_selectionChanged() {
         if HapticManager.isHapticsEnabled {
             self.app_selectionChanged()
@@ -147,8 +136,7 @@ extension UISelectionFeedbackGenerator {
     }
 }
 
-// MARK: - Motion-Aware Animation Helper
-/// Executes an animation block unless Reduce Motion is enabled (app setting or system).
+// Executes animation block respecting app and system reduce motion preferences
 public func withAppAnimation<Result>(
     _ animation: Animation? = .spring(response: 0.35, dampingFraction: 0.8),
     _ body: () throws -> Result
@@ -162,8 +150,8 @@ public func withAppAnimation<Result>(
     }
 }
 
-// MARK: - Sensory Feedback View Modifier Extension
 extension View {
+    // Applies SwiftUI sensory feedback modifier guarded by the haptics preference
     @ViewBuilder
     public func appSensoryFeedback<T: Equatable>(_ feedback: SensoryFeedback, trigger: T) -> some View {
         if HapticManager.isHapticsEnabled {

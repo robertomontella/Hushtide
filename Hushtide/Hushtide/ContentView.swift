@@ -34,28 +34,22 @@ public struct ContentView: View {
                 .environment(\.appHighContrast, viewModel.isHighContrastEnabled)
                 .environment(\.appReduceMotion, viewModel.isReduceMotionEnabled)
         }
-        // MARK: - Global Accessibility Enforcers
-        // 1. Reduce Motion: Disables spring animations app-wide when enabled
         .transaction { transaction in
             if viewModel.isReduceMotionEnabled {
                 transaction.animation = nil
                 transaction.disablesAnimations = true
             }
         }
-        // 2. High Contrast Environment Key
         .environment(\.appHighContrast, viewModel.isHighContrastEnabled)
         .environment(\.appReduceMotion, viewModel.isReduceMotionEnabled)
-        // MARK: - Apple Health Sync
         .task {
             viewModel.sleepModel.checkAndPerformDailyResetIfNeeded()
             await viewModel.startHealthSync()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                // Check daily reset for sleep checkmarks
                 viewModel.sleepModel.checkAndPerformDailyResetIfNeeded()
                 
-                // If user has actively authenticated and connected Apple Health, refresh data in background
                 if viewModel.isAppleHealthSynced && viewModel.isAppleHealthConnected {
                     Task { await viewModel.syncHealthData(requireAuthentication: false) }
                 }
@@ -64,7 +58,6 @@ public struct ContentView: View {
     }
 }
 
-// MARK: - High Contrast Environment Support
 private struct AppHighContrastKey: EnvironmentKey {
     static let defaultValue: Bool = false
 }

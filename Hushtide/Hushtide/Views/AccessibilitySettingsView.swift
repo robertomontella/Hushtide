@@ -4,7 +4,6 @@ public struct AccessibilitySettingsView: View {
     @Bindable public var viewModel: TrainingModel
     @Environment(\.colorScheme) private var colorScheme
     
-    // Interactive test states for immediate live verification
     @State private var motionTestOffset: CGFloat = 0
     @State private var hapticTestFeedbackNotice: String? = nil
     
@@ -15,19 +14,10 @@ public struct AccessibilitySettingsView: View {
     public var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 18) {
-                // MARK: - Hero Banner
                 accessibilityHeroBanner
-                
-                // MARK: - Section: Interaction & Haptics
                 interactionSection
-                
-                // MARK: - Section: Vision & Contrast
                 visionSection
-                
-                // MARK: - Section: Screen Reader & VoiceOver
                 screenReaderSection
-                
-                // MARK: - Compliance Footer
                 complianceFooter
                 
                 Spacer().frame(height: 30)
@@ -40,7 +30,6 @@ public struct AccessibilitySettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
     
-    // MARK: - Hero Banner
     private var accessibilityHeroBanner: some View {
         VStack(spacing: 12) {
             ZStack {
@@ -81,7 +70,6 @@ public struct AccessibilitySettingsView: View {
         )
     }
     
-    // MARK: - Interaction & Haptics Section
     private var interactionSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("INTERACTION & HAPTIC FEEDBACK")
@@ -90,7 +78,6 @@ public struct AccessibilitySettingsView: View {
                 .padding(.horizontal, 4)
             
             VStack(spacing: 0) {
-                // Haptics Toggle
                 Toggle(isOn: Binding(
                     get: { viewModel.isHapticsEnabled },
                     set: { newValue in
@@ -121,7 +108,6 @@ public struct AccessibilitySettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
-                // Test Haptics Button
                 Button {
                     HapticManager.impact(.heavy)
                     hapticTestFeedbackNotice = viewModel.isHapticsEnabled
@@ -154,7 +140,6 @@ public struct AccessibilitySettingsView: View {
                 
                 Divider()
                 
-                // Reduce Motion Toggle
                 Toggle(isOn: $viewModel.isReduceMotionEnabled) {
                     HStack(spacing: 14) {
                         Image(systemName: "waveform.path.ecg")
@@ -176,7 +161,6 @@ public struct AccessibilitySettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
-                // Live Motion Test Demo
                 HStack {
                     Text("Motion Test:")
                         .font(.system(size: 12, weight: .medium))
@@ -198,10 +182,8 @@ public struct AccessibilitySettingsView: View {
                     
                     Button {
                         if viewModel.isReduceMotionEnabled {
-                            // Instant jump with no animation
                             motionTestOffset = (motionTestOffset == 0) ? 92 : 0
                         } else {
-                            // Spring animation
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                                 motionTestOffset = (motionTestOffset == 0) ? 92 : 0
                             }
@@ -228,7 +210,6 @@ public struct AccessibilitySettingsView: View {
         }
     }
     
-    // MARK: - Vision & High Contrast Section
     private var visionSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("VISION & HIGH CONTRAST")
@@ -237,7 +218,6 @@ public struct AccessibilitySettingsView: View {
                 .padding(.horizontal, 4)
             
             VStack(spacing: 0) {
-                // High Contrast Toggle
                 Toggle(isOn: $viewModel.isHighContrastEnabled) {
                     HStack(spacing: 14) {
                         Image(systemName: "circle.lefthalf.filled")
@@ -259,7 +239,6 @@ public struct AccessibilitySettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
-                // Live High-Contrast Visual Demo Card
                 VStack(spacing: 8) {
                     HStack {
                         Text("Live Contrast Preview")
@@ -322,7 +301,6 @@ public struct AccessibilitySettingsView: View {
                 
                 Divider().padding(.leading, 58)
                 
-                // Dynamic Type info
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: "textformat.size")
                         .font(.system(size: 18, weight: .medium))
@@ -352,7 +330,6 @@ public struct AccessibilitySettingsView: View {
         }
     }
     
-    // MARK: - VoiceOver Section
     private var screenReaderSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("SCREEN READER (VOICEOVER)")
@@ -385,7 +362,6 @@ public struct AccessibilitySettingsView: View {
         }
     }
     
-    // MARK: - Compliance Footer
     private var complianceFooter: some View {
         VStack(spacing: 4) {
             Text("Conforms to European Accessibility Act (Directive EU 2019/882) & WCAG 2.1 AA")

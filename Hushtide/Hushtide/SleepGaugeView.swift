@@ -27,11 +27,9 @@ public struct SleepGaugeView: View {
         let strokeW: CGFloat = appHighContrast ? 18 : 15
         
         ZStack {
-            // Background Inactive Track
             Circle()
                 .stroke(appHighContrast ? trackColor.opacity(0.8) : trackColor, lineWidth: strokeW)
             
-            // Foreground Active Progress Arc (only drawn when progress > 0)
             if progress > 0.001 {
                 Circle()
                     .trim(from: 0.0, to: CGFloat(max(0.0, min(1.0, progress))))
@@ -43,7 +41,6 @@ public struct SleepGaugeView: View {
                     .animation(appReduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.78), value: progress)
             }
             
-            // Central Metrics Text
             VStack(spacing: 4) {
                 Text(durationText)
                     .font(.system(size: 27, weight: appHighContrast ? .black : .bold))
@@ -51,7 +48,6 @@ public struct SleepGaugeView: View {
                     .contentTransition(.numericText())
                     .animation(appReduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: durationText)
                 
-                // Sleep Goal Target (Read-only static label)
                 Text(targetText)
                     .font(.system(size: 13, weight: appHighContrast ? .bold : .regular))
                     .foregroundColor(appHighContrast ? .primary : .secondary)

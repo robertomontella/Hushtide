@@ -121,6 +121,7 @@ public struct SettingsView: View {
         }
     }
     
+    // Renders the system and Apple Health integration section
     @ViewBuilder
     private func systemIntegrationSection(viewModel: TrainingModel) -> some View {
         Section {

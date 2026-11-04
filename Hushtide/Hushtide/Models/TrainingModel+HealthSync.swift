@@ -4,9 +4,9 @@ import HealthKit
 extension TrainingModel {
 
     @MainActor
+    // Initializes automatic background sync if HealthKit was previously connected
     public func startHealthSync() async {
         await health.refreshAuthorizationStatus()
-        // If the user previously connected Apple Health, keep data synchronized continuously
         if isAppleHealthConnected {
             health.startObserving { [weak self] in
                 self?.scheduleHealthSync()
@@ -16,8 +16,8 @@ extension TrainingModel {
     }
 
     @MainActor
+    // Authenticates with Face ID and connects Apple Health
     public func connectAppleHealth() async {
-        // Face ID is required; if unrecognized, requires the phone's PIN instead
         let authenticated = await BiometricAuthService.authenticateForHealthSync(
             reason: "Face ID is required to connect and synchronize Apple Health data. If Face ID is not recognized, enter your phone PIN."
         )
@@ -26,7 +26,6 @@ extension TrainingModel {
             return
         }
         
-        // Request authorization from HealthKit so the permission sheet appears
         _ = await health.requestAuthorization()
         
         isAppleHealthConnected = true
@@ -42,9 +41,8 @@ extension TrainingModel {
         HapticManager.notification(.success)
     }
 
-    /// Public sync entry point: default is background/pull-to-refresh (requireAuthentication: false).
-    /// Synchronization remains continuous across app restarts and only stops when explicitly stopped by the user.
     @MainActor
+    // Synchronizes Apple Health data with optional biometric authentication
     public func syncHealthData(requireAuthentication: Bool = false) async {
         guard isAppleHealthConnected else { return }
         if requireAuthentication {
@@ -62,7 +60,7 @@ extension TrainingModel {
         HapticManager.notification(.success)
     }
 
-    /// Debounced sync, used when HealthKit observer notifies of new samples.
+    // Schedules a debounced sync when HealthKit observer receives updates
     public func scheduleHealthSync() {
         pendingHealthSync?.cancel()
         pendingHealthSync = Task { [weak self] in
@@ -72,9 +70,8 @@ extension TrainingModel {
         }
     }
 
-    // MARK: - Core Health Data Sync Execution
-
     @MainActor
+    // Fetches sleep, workouts, and heart metrics from HealthKit and updates state
     public func performHealthDataSync() async {
         guard !health.isSyncing else { return }
         health.isSyncing = true
@@ -88,15 +85,12 @@ extension TrainingModel {
         let firstNeededDay = min(startOfWeek, sevenDaysAgo)
         let endOfWeek = calendar.date(byAdding: .day, value: 7, to: startOfWeek) ?? now
 
-        // 1. Sleep
         var nights = (try? await health.fetchSleepNights(from: firstNeededDay, through: today)) ?? [:]
         if nights.isEmpty {
             nights = generateBaselineSyncedNights(startOfWeek: startOfWeek, today: today)
         }
 
-        // 2. Workouts of the current week (Mon–Sun)
         var workouts = (try? await health.fetchWorkouts(from: startOfWeek, to: endOfWeek)) ?? []
-        // Discard any workouts that the user permanently deleted
         workouts.removeAll { deletedWorkoutUUIDs.contains($0.uuid) }
         
         let hasInitializedBaseline = UserDefaults.standard.bool(forKey: "RecoveryApp_hasInitializedBaseline")
@@ -105,7 +99,6 @@ extension TrainingModel {
             UserDefaults.standard.set(true, forKey: "RecoveryApp_hasInitializedBaseline")
         }
 
-        // 3. Heart metrics (today vs 30-day baseline)
         let ms = HKUnit.secondUnit(with: .milli)
         let bpm = HKUnit.count().unitDivided(by: .minute())
         let dayAgo = now.addingTimeInterval(-24 * 3600)
@@ -115,11 +108,9 @@ extension TrainingModel {
         let rhrToday = (try? await health.latestQuantity(.restingHeartRate, unit: bpm, since: dayAgo)) ?? 54.0
         let rhrBaseline = (try? await health.averageQuantity(.restingHeartRate, unit: bpm, from: monthAgo, to: now)) ?? 56.0
 
-        // 4. Profile (fills empty fields)
         let weightKg = try? await health.latestQuantity(.bodyMass, unit: .gramUnit(with: .kilo))
         let heightCm = try? await health.latestQuantity(.height, unit: .meterUnit(with: .centi))
 
-        // Cache heart metrics on TrainingModel for all day evaluations
         self.latestHRV = hrvToday
         self.baselineHRV = hrvBaseline
         self.latestRHR = rhrToday
@@ -142,25 +133,23 @@ extension TrainingModel {
         health.lastSyncDate = Date()
     }
 
-    // MARK: - Baseline Synced Data Generators (Fallback for empty HealthKit on Simulator)
-
+    // Generates default weekly sleep data when HealthKit contains no samples
     private func generateBaselineSyncedNights(startOfWeek: Date, today: Date) -> [Date: SleepNight] {
         let calendar = Self.mondayCalendar
         var result: [Date: SleepNight] = [:]
         let schedule: [(asleep: Int, bedH: Int, bedM: Int, wakeH: Int, wakeM: Int)] = [
-            (485, 23, 0, 7, 5),   // Mon: 8h 05m (Target Met!)
-            (390, 23, 30, 6, 0),  // Tue: 6h 30m
-            (490, 22, 50, 7, 0),  // Wed: 8h 10m (Target Met!)
-            (480, 22, 45, 6, 45), // Thu: 8h 00m (Target Met!)
-            (435, 23, 15, 6, 30), // Fri: 7h 15m
-            (510, 23, 30, 8, 0),  // Sat: 8h 30m (Target Met!)
-            (450, 23, 0, 6, 30)   // Sun: 7h 30m
+            (485, 23, 0, 7, 5),
+            (390, 23, 30, 6, 0),
+            (490, 22, 50, 7, 0),
+            (480, 22, 45, 6, 45),
+            (435, 23, 15, 6, 30),
+            (510, 23, 30, 8, 0),
+            (450, 23, 0, 6, 30)
         ]
         
         for offset in 0..<7 {
             guard let day = calendar.date(byAdding: .day, value: offset, to: startOfWeek) else { continue }
             let startOfD = calendar.startOfDay(for: day)
-            // Days in the future remain 0
             if calendarModel.isDateInFuture(startOfD) { continue }
             
             let item = schedule[offset % schedule.count]
@@ -183,12 +172,12 @@ extension TrainingModel {
 
     public static let baselineWorkoutUUID = UUID(uuidString: "77777777-8888-9999-AAAA-BBBBBBBBBBBB")!
 
+    // Generates baseline workouts for the current week when syncing
     private func generateBaselineSyncedWorkouts(startOfWeek: Date, today: Date) -> [HealthWorkout] {
         guard !deletedWorkoutUUIDs.contains(Self.baselineWorkoutUUID) else { return [] }
         let calendar = Self.mondayCalendar
         var result: [HealthWorkout] = []
         
-        // Workout on Wednesday if not in future
         if let wed = calendar.date(byAdding: .day, value: 2, to: startOfWeek), !calendarModel.isDateInFuture(wed) {
             let start = calendar.date(bySettingHour: 17, minute: 30, second: 0, of: wed) ?? wed
             let end = calendar.date(bySettingHour: 18, minute: 15, second: 0, of: wed) ?? wed
@@ -208,8 +197,7 @@ extension TrainingModel {
         return result
     }
 
-    // MARK: - Mapping: Sleep
-
+    // Updates sleep model records, debt, and quality from synced sleep nights
     private func applySleep(
         nights: [Date: SleepNight],
         today: Date,
@@ -220,7 +208,6 @@ extension TrainingModel {
         let calendar = Self.mondayCalendar
         let targetMinutes = sleepModel.targetSleepHours * 60.0
 
-        // Update 7-day sleep minutes and quality percentages
         var updatedWeeklySleep = sleepModel.weeklySleepMinutes
         var updatedQualityBars = weeklyQualityPercentages
 
@@ -233,7 +220,6 @@ extension TrainingModel {
                 continue
             }
             
-            // If the user manually edited or scheduled this day, preserve custom schedule and duration
             if offset < sleepModel.weeklyRecords.count && sleepModel.weeklyRecords[offset].isManualSchedule {
                 if offset < updatedWeeklySleep.count {
                     updatedWeeklySleep[offset] = sleepModel.weeklySleepMinutes[offset]
@@ -245,7 +231,6 @@ extension TrainingModel {
                     updatedWeeklySleep[offset] = night.asleepMinutes
                 }
                 
-                // Update this day's individual schedule record & bedtime checkmark compliance
                 if offset < sleepModel.weeklyRecords.count {
                     let bedCalendar = Calendar.current
                     let bHour24 = bedCalendar.component(.hour, from: night.bedtime)
@@ -264,7 +249,6 @@ extension TrainingModel {
                         $0.title.localizedCaseInsensitiveContains("22:00") ||
                         $0.title.localizedCaseInsensitiveContains("bed at 22")
                     }) {
-                        // Bedtime at 23:00 or after 22:00 -> box is not checked by default, preserving user manual ticks
                         if !dayChecks[cIdx].isManuallySet {
                             let isLate = (bHour24 >= 23 || (bHour24 == 22 && bMin > 15) || bHour24 < 12)
                             dayChecks[cIdx].isChecked = !isLate
@@ -284,7 +268,6 @@ extension TrainingModel {
                 }
                 
                 if offset < updatedQualityBars.count {
-                    // Evaluate this day's rest quality via RecoveryAlgorithm
                     let dayChecks = (offset < sleepModel.weeklyRecords.count) ? sleepModel.weeklyRecords[offset].checkmarks : sleepModel.checkmarks
                     let (dayQuality, _, _, _) = RecoveryAlgorithm.calculateRestQuality(
                         currentNight: night,
@@ -301,24 +284,19 @@ extension TrainingModel {
         sleepModel.weeklySleepMinutes = updatedWeeklySleep
         weeklyQualityPercentages = updatedQualityBars
 
-        // Ensure the active selected day in sleepModel has its record and minutes immediately loaded
         let activeIndex = calendarModel.selectedDayIndex
         sleepModel.selectDay(at: activeIndex)
         sleepModel.saveWeeklyRecordsToStorage()
 
-        // Compute Sleep Debt (difference between actual weekly average and target)
         let debt = sleepModel.weeklyAverageMinutes - Int(targetMinutes)
         sleepDebtValue = Self.formatSigned(minutes: debt)
 
-        // Compute Regularity
         let nightsList = nights.values.sorted { $0.day < $1.day }
         regularityMetric = SecondaryMetric(title: "Regularity", value: Self.regularity(of: nightsList))
     }
 
-    // MARK: - Mapping: Workouts
-
+    // Merges HealthKit workouts into the local logged workouts collection
     private func applyWorkouts(_ workouts: [HealthWorkout], startOfWeek: Date) {
-        // Discard any workouts that the user explicitly deleted
         let validWorkouts = workouts.filter { !deletedWorkoutUUIDs.contains($0.uuid) }
         guard !validWorkouts.isEmpty else { return }
 
@@ -336,7 +314,6 @@ extension TrainingModel {
             )
         }
         
-        // Merge with non-deleted existing local workouts
         var mergedMap: [UUID: LoggedWorkout] = [:]
         for workout in loggedWorkouts {
             if !deletedWorkoutUUIDs.contains(workout.id) && !(workout.healthKitUUID.map { deletedWorkoutUUIDs.contains($0) } ?? false) {
@@ -346,7 +323,6 @@ extension TrainingModel {
         
         for workout in imported {
             if !deletedWorkoutUUIDs.contains(workout.id) {
-                // If this workout already exists locally by healthKitUUID, keep the existing one
                 if let existing = loggedWorkouts.first(where: { $0.healthKitUUID == workout.healthKitUUID }) {
                     mergedMap[existing.id] = existing
                 } else {
@@ -358,8 +334,7 @@ extension TrainingModel {
         loggedWorkouts = Array(mergedMap.values).sorted { $0.scheduledDate < $1.scheduledDate }
     }
 
-    // MARK: - Mapping: Recovery Algorithm
-
+    // Evaluates recovery metrics using current night, heart metrics, and workouts
     private func applyRecoveryAlgorithm(
         nights: [Date: SleepNight],
         today: Date,
@@ -371,7 +346,6 @@ extension TrainingModel {
         let sortedNights = nights.values.sorted { $0.day < $1.day }
         let currentNight = nights[today] ?? sortedNights.last
         
-        // Pass all HealthKit metrics into the recovery calculation engine
         let input = RecoveryInput(
             currentNight: currentNight,
             recentNights: sortedNights,
@@ -387,7 +361,6 @@ extension TrainingModel {
         
         let result = RecoveryAlgorithm.evaluate(input: input)
         
-        // Effectively modify Quality and Readiness metrics in Training section
         readinessScore = result.readinessScore
         qualityScore = result.qualityScore
         sleepDebtValue = result.sleepDebtFormatted
@@ -395,8 +368,7 @@ extension TrainingModel {
         customRecoveryRecommendation = result.recoveryRecommendation
     }
 
-    // MARK: - Mapping: Profile
-
+    // Updates user profile metrics with HealthKit body measurements
     private func applyProfile(weightKg: Double?, heightCm: Double?, workouts: [HealthWorkout]) {
         if let kg = weightKg {
             weight = String(format: "%.1f kg", kg)
@@ -423,22 +395,23 @@ extension TrainingModel {
         profileAvatarIcon = "person.crop.circle.fill"
     }
 
-    // MARK: - Helpers
-
     static var mondayCalendar: Calendar {
         var calendar = Calendar.current
         calendar.firstWeekday = 2
         return calendar
     }
 
+    // Clamps a numeric value between 0 and 100
     private static func clamp(_ value: Double) -> Double { max(0, min(100, value)) }
 
+    // Formats total minutes into hours and minutes display string
     static func formatDuration(minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60
         return m == 0 ? "\(h)h 00m" : "\(h)h \(m)m"
     }
 
+    // Formats minutes with a positive or negative sign
     private static func formatSigned(minutes: Int) -> String {
         let sign = minutes < 0 ? "-" : "+"
         let value = abs(minutes)
@@ -447,7 +420,7 @@ extension TrainingModel {
         return "\(sign)\(value / 60)h \(value % 60)m"
     }
 
-    /// Standard deviation of bedtimes (minutes from 18:00) → label
+    // Computes schedule regularity classification from bedtime consistency
     private static func regularity(of nights: [SleepNight]) -> String {
         guard nights.count >= 2 else { return "On time" }
         let calendar = Calendar.current

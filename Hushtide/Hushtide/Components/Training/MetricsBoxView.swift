@@ -17,7 +17,6 @@ public struct MetricsBoxView: View {
         self.regularityMetric = regularityMetric
     }
     
-    // Backwards-compatible initializer
     public init(
         sleepMetric: SecondaryMetric,
         qualityMetric: SecondaryMetric,
@@ -29,21 +28,15 @@ public struct MetricsBoxView: View {
     }
     
     public var body: some View {
-        // MARK: - 3-Column Metrics Container
         HStack(spacing: 0) {
-            // Column 1: Sleep Debt
             metricColumn(title: sleepDebtMetric.title, value: sleepDebtMetric.value)
             
-            // Vertical Divider
             dividerView
             
-            // Column 2: Rested
             metricColumn(title: restedMetric.title, value: restedMetric.value)
             
-            // Vertical Divider
             dividerView
             
-            // Column 3: Regularity
             metricColumn(title: regularityMetric.title, value: regularityMetric.value)
         }
         .padding(.vertical, 12)

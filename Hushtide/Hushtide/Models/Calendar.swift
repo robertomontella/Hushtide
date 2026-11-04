@@ -1,22 +1,18 @@
 import SwiftUI
 import Observation
 
-// MARK: - Reusable Calendar Model
 @Observable
 public final class CalendarModel {
     
-    // MARK: - Selected Date State
     public var selectedDate: Date {
         didSet {
             recalculateWeek(around: selectedDate)
         }
     }
     
-    // MARK: - Weekdays State
     public var weekDays: [DayItem] = []
     public var selectedDayIndex: Int = 0
     
-    // MARK: - Subtitles & Labels
     public var currentDaySubtitle: String {
         guard selectedDayIndex >= 0 && selectedDayIndex < weekDays.count else {
             return formattedDateDescription(for: selectedDate)
@@ -30,27 +26,28 @@ public final class CalendarModel {
         return formatter.string(from: selectedDate).capitalized
     }
     
-    // MARK: - Initializer (defaults to current date across the app)
     public init(initialDate: Date = Date()) {
         self.selectedDate = initialDate
         recalculateWeek(around: initialDate)
     }
     
-    // MARK: - Future Date Helpers
     public var isSelectedDateInFuture: Bool {
         isDateInFuture(selectedDate)
     }
     
+    // Checks if a given date is in the future
     public func isDateInFuture(_ date: Date) -> Bool {
         let calendar = Calendar.current
         return calendar.startOfDay(for: date) > calendar.startOfDay(for: Date())
     }
     
+    // Checks if a weekday index is in the future
     public func isDayIndexInFuture(_ index: Int) -> Bool {
         let dayDate = dateForDay(at: index)
         return isDateInFuture(dayDate)
     }
     
+    // Calculates the calendar date for a weekday index relative to Monday
     public func dateForDay(at index: Int) -> Date {
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: selectedDate)
@@ -60,7 +57,7 @@ public final class CalendarModel {
         return calendar.date(byAdding: .day, value: index, to: monday) ?? selectedDate
     }
     
-    // MARK: - User Intent Actions
+    // Selects a day by its index in the current week
     public func selectDay(at index: Int) {
         guard index >= 0 && index < weekDays.count else { return }
         HapticManager.impact(.light)
@@ -72,6 +69,7 @@ public final class CalendarModel {
         }
     }
     
+    // Selects an arbitrary date and updates the active week
     public func selectDate(_ newDate: Date) {
         HapticManager.impact(.medium)
         
@@ -80,10 +78,12 @@ public final class CalendarModel {
         }
     }
     
+    // Resets the calendar selection to today
     public func goToToday() {
         selectDate(Date())
     }
     
+    // Moves the active calendar view to the previous week
     public func moveToPreviousWeek() {
         let calendar = Calendar.current
         if let prevWeek = calendar.date(byAdding: .day, value: -7, to: selectedDate) {
@@ -91,6 +91,7 @@ public final class CalendarModel {
         }
     }
     
+    // Moves the active calendar view to the next week
     public func moveToNextWeek() {
         let calendar = Calendar.current
         if let nextWeek = calendar.date(byAdding: .day, value: 7, to: selectedDate) {
@@ -98,7 +99,7 @@ public final class CalendarModel {
         }
     }
     
-    // MARK: - Dynamic Week Calculation (Monday to Sunday)
+    // Recalculates the seven days of the week surrounding a base date
     public func recalculateWeek(around baseDate: Date) {
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: baseDate)
@@ -136,6 +137,7 @@ public final class CalendarModel {
         self.selectedDayIndex = matchIndex
     }
     
+    // Formats a date into a localized descriptive string
     private func formattedDateDescription(for date: Date) -> String {
         let calendar = Calendar.current
         let dayFormatter = DateFormatter()

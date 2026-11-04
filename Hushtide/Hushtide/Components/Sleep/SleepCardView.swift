@@ -37,7 +37,6 @@ public struct SleepCardView: View {
     
     public var body: some View {
         VStack(spacing: 12) {
-            // Circular Progress Gauge
             SleepGaugeView(
                 progress: progress,
                 durationText: durationText,
@@ -47,7 +46,6 @@ public struct SleepCardView: View {
             )
             .padding(.top, 0)
             
-            // In Bed & Asleep Schedule Rows (Matching new design with icons & chevron pills)
             VStack(spacing: 9) {
                 SleepScheduleRowView(
                     title: "In Bed",

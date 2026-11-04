@@ -32,25 +32,21 @@ public struct ProfileRowView: View {
                 onTap?()
             } label: {
                 HStack(spacing: 14) {
-                    // SF Symbol placed directly on the card background (no rectangle behind)
                     Image(systemName: iconName)
                         .font(.system(size: 20, weight: .medium))
                         .foregroundColor(iconColor)
                         .frame(width: 28, height: 28, alignment: .center)
                     
-                    // Row Title
                     Text(title)
                         .font(.system(size: 16, weight: appHighContrast ? .bold : .medium))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
-                    // Row Value (Editable)
                     Text(value)
                         .font(.system(size: 15, weight: appHighContrast ? .semibold : .regular))
                         .foregroundColor(appHighContrast ? .primary : .secondary)
                     
-                    // Subtle Disclosure Chevron
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(Color(uiColor: .tertiaryLabel))

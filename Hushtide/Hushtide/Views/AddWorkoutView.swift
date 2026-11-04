@@ -1,10 +1,3 @@
-//
-//  AddWorkoutView.swift
-//  RecoveryApp
-//
-//  Created by Senior iOS Developer on 30/10/2026.
-//
-
 import SwiftUI
 
 public struct AddWorkoutView: View {
@@ -12,7 +5,6 @@ public struct AddWorkoutView: View {
     @Bindable public var viewModel: TrainingModel
     public var editingWorkout: LoggedWorkout?
     
-    // Form fields
     @State private var selectedSport: String = "Running"
     @State private var selectedIntensity: IntensityLevel = .hard
     @State private var durationHours: Int = 0
@@ -104,22 +96,11 @@ public struct AddWorkoutView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 16) {
-                        // MARK: - Section 1: Session Intensity Recommended (Light, Medium, Hard + Readiness Box)
                         intensitySection
-                        
-                        // Subtle grey guidance note (no capsule)
                         intensityGuidanceNote
-                        
-                        // MARK: - Section 2: Activity Type
                         activitySection
-                        
-                        // MARK: - Section 3: Duration (Split Dual Wheel: Hours + Minutes)
                         durationSection
-                        
-                        // MARK: - Section 4: Session Notes (Extended height downwards)
                         notesSection
-                        
-                        // MARK: - Save Action Button (Pushed downwards)
                         saveActionButton
                         
                         Spacer().frame(height: 36)
@@ -159,7 +140,6 @@ public struct AddWorkoutView: View {
         }
     }
     
-    // MARK: - Intensity Guidance Note (Clean comment without capsule)
     private var intensityGuidanceNote: some View {
         HStack {
             Text(
@@ -176,7 +156,6 @@ public struct AddWorkoutView: View {
         .padding(.top, -6)
     }
     
-    // MARK: - Activity Section
     private var activitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ACTIVITY TYPE")
@@ -220,7 +199,6 @@ public struct AddWorkoutView: View {
         }
     }
     
-    // MARK: - Intensity Selector Section (Top)
     private var intensitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -239,7 +217,6 @@ public struct AddWorkoutView: View {
             .padding(.horizontal, 4)
             
             HStack(spacing: 8) {
-                // 3 Selectable Intensity Buttons (Light, Medium, Hard)
                 ForEach(selectableIntensities) { level in
                     let isSelected = (selectedIntensity == level)
                     
@@ -281,7 +258,6 @@ public struct AddWorkoutView: View {
                     .buttonStyle(.plain)
                 }
                 
-                // Non-clickable box without icon, without colored border, with well-proportioned multi-line title in readiness color
                 Text(formattedRecoveryStatusTitle)
                     .font(.system(size: 13.5, weight: .bold))
                     .foregroundColor(viewModel.dynamicThemeColor)
@@ -300,7 +276,6 @@ public struct AddWorkoutView: View {
         }
     }
     
-    // MARK: - Duration Section
     private var durationSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -317,7 +292,6 @@ public struct AddWorkoutView: View {
             .padding(.horizontal, 4)
             
             HStack(spacing: 0) {
-                // Left Wheel: Hours (Starting at 00h)
                 Picker("Hours", selection: $durationHours) {
                     ForEach(hoursOptions, id: \.self) { h in
                         Text(String(format: "%02dh", h))
@@ -329,7 +303,6 @@ public struct AddWorkoutView: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
                 
-                // Right Wheel: Minutes (Multiples of 5)
                 Picker("Minutes", selection: $durationMinutes) {
                     ForEach(minutesOptions, id: \.self) { m in
                         Text(String(format: "%02dm", m))
@@ -351,7 +324,6 @@ public struct AddWorkoutView: View {
         }
     }
     
-    // MARK: - Session Notes (Multi-line TextEditor with tap anywhere to focus + Liquid Glass Done button)
     private var notesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -423,7 +395,6 @@ public struct AddWorkoutView: View {
         .padding(.top, 14)
     }
     
-    // MARK: - Save Action Button (Pushed further downwards)
     private var saveActionButton: some View {
         Button {
             saveAndDismiss()

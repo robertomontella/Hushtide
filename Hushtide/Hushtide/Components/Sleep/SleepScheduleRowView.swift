@@ -30,7 +30,6 @@ public struct SleepScheduleRowView: View {
             onTap?()
         } label: {
             HStack(spacing: 14) {
-                // Circular Icon with soft purple background
                 ZStack {
                     Circle()
                         .fill(accentColor.opacity(0.14))
@@ -41,7 +40,6 @@ public struct SleepScheduleRowView: View {
                         .foregroundColor(accentColor)
                 }
                 
-                // Title and Subtitle (e.g. "In Bed", "Bedtime schedule")
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 16, weight: .bold))
@@ -54,7 +52,6 @@ public struct SleepScheduleRowView: View {
                 
                 Spacer()
                 
-                // Time Selector Pill with Chevrons
                 HStack(spacing: 7) {
                     Text(timeString)
                         .font(.system(size: 16, weight: .bold))

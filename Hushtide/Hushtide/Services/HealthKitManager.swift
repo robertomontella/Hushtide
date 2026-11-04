@@ -2,9 +2,7 @@ import Foundation
 import HealthKit
 import Observation
 
-// MARK: - Sleep Night (aggregated from HealthKit sleep samples)
 public struct SleepNight: Hashable, Sendable {
-    /// Calendar day on which the night ends (the wake-up day).
     public let day: Date
     public let bedtime: Date
     public let wakeTime: Date
@@ -13,14 +11,12 @@ public struct SleepNight: Hashable, Sendable {
     public let deepMinutes: Int
     public let remMinutes: Int
 
-    /// Sleep efficiency (time asleep / time in bed), 0...1
     public var efficiency: Double {
         guard inBedMinutes > 0 else { return 0 }
         return min(1, Double(asleepMinutes) / Double(inBedMinutes))
     }
 }
 
-// MARK: - Workout read from HealthKit
 public struct HealthWorkout: Hashable, Sendable {
     public let uuid: UUID
     public let sportName: String
@@ -34,11 +30,9 @@ public struct HealthWorkout: Hashable, Sendable {
     public let notes: String
 }
 
-// MARK: - HealthKit Manager
 @Observable
 public final class HealthKitManager {
 
-    // MARK: Public state (observed by the UI)
     public private(set) var isAuthorized: Bool = false
     public internal(set) var isSyncing: Bool = false
     public internal(set) var lastSyncDate: Date?
@@ -46,7 +40,6 @@ public final class HealthKitManager {
 
     public var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
-    // MARK: Private
     @ObservationIgnored private let store = HKHealthStore()
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
 
@@ -58,7 +51,6 @@ public final class HealthKitManager {
         static let notes = "RecoveryAppNotes"
     }
 
-    // MARK: Data types
     private var readTypes: Set<HKObjectType> {
         [
             HKCategoryType(.sleepAnalysis),
@@ -76,6 +68,7 @@ public final class HealthKitManager {
         [HKObjectType.workoutType()]
     }
 
+    // Resets stored HealthKit authorization flags
     public func resetAuthorization() {
         isAuthorized = false
         lastSyncDate = nil
@@ -84,9 +77,7 @@ public final class HealthKitManager {
 
     public init() {}
 
-    // MARK: - Authorization
-
-    /// Checks (without showing UI) whether the permission sheet was already presented.
+    // Refreshes HealthKit authorization status without showing UI
     public func refreshAuthorizationStatus() async {
         guard isAvailable else {
             isAuthorized = false
@@ -97,13 +88,12 @@ public final class HealthKitManager {
             isAuthorized = (status == .unnecessary)
         } catch {
             lastError = error.localizedDescription
-            // Don't overwrite isAuthorized if it was already granted
         }
     }
 
-    /// Shows the Apple Health permission sheet. Returns true if the request completed.
     @discardableResult
     @MainActor
+    // Requests authorization to read and write Apple Health data
     public func requestAuthorization() async -> Bool {
         guard isAvailable else {
             lastError = "Apple Health is not available on this device."
@@ -131,15 +121,11 @@ public final class HealthKitManager {
         }
     }
 
-    /// True only if the user allowed the app to WRITE workouts.
     public var canSaveWorkouts: Bool {
         store.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized
     }
 
-    // MARK: - Live updates (sleep + workouts)
-
-    /// Keeps long-running anchored queries open: every time Health receives new
-    /// sleep or workout samples (e.g. from Apple Watch) `onChange` is called.
+    // Observes live updates for sleep and workouts using anchored queries
     public func startObserving(onChange: @escaping @MainActor () -> Void) {
         stopObserving()
         let since = Calendar.current.date(byAdding: .day, value: -14, to: Date())
@@ -181,21 +167,19 @@ public final class HealthKitManager {
         observationTasks = [sleepTask, workoutTask]
     }
 
+    // Stops all active background queries and observers
     public func stopObserving() {
         observationTasks.forEach { $0.cancel() }
         observationTasks = []
     }
 
-    // MARK: - Sleep
-
-    /// Night that ends on `day` (e.g. "Today" = last night).
+    // Fetches aggregated sleep data for a single night ending on the given date
     public func fetchSleepNight(endingOn day: Date) async throws -> SleepNight? {
         let nights = try await fetchSleepNights(from: day, through: day)
         return nights[Calendar.current.startOfDay(for: day)]
     }
 
-    /// Nights keyed by the start of the wake-up day.
-    /// A night ending on day D is everything between D-1 18:00 and D 18:00.
+    // Fetches aggregated sleep nights within a specified date range
     public func fetchSleepNights(from firstDay: Date, through lastDay: Date) async throws -> [Date: SleepNight] {
         let calendar = Calendar.current
         let firstStart = calendar.startOfDay(for: firstDay)
@@ -223,6 +207,7 @@ public final class HealthKitManager {
         return result
     }
 
+    // Converts raw HealthKit sleep samples into a structured sleep night
     private static func makeNight(from samples: [HKCategorySample], day: Date) -> SleepNight? {
         var all: [DateInterval] = []
         var asleep: [DateInterval] = []
@@ -241,7 +226,6 @@ public final class HealthKitManager {
         }
 
         guard !all.isEmpty else { return nil }
-        // iPhone-only users often have just "In Bed" samples: use them as sleep time.
         let sleepIntervals = asleep.isEmpty ? all : asleep
 
         guard let bedtime = all.map(\.start).min(),
@@ -258,7 +242,7 @@ public final class HealthKitManager {
         )
     }
 
-    /// Merges overlapping intervals (Watch + iPhone record the same night) and returns minutes.
+    // Merges overlapping date intervals and calculates total minutes
     private static func minutes(of intervals: [DateInterval]) -> Int {
         let sorted = intervals.sorted { $0.start < $1.start }
         var merged: [DateInterval] = []
@@ -273,9 +257,7 @@ public final class HealthKitManager {
         return Int((seconds / 60).rounded())
     }
 
-    // MARK: - Heart metrics / body measurements
-
-    /// Most recent sample of a quantity type (optionally only after `since`).
+    // Fetches the most recent sample value for a quantity type
     public func latestQuantity(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit, since: Date? = nil) async throws -> Double? {
         let predicate = since.map { HKQuery.predicateForSamples(withStart: $0, end: nil, options: []) }
         let descriptor = HKSampleQueryDescriptor(
@@ -286,7 +268,7 @@ public final class HealthKitManager {
         return try await descriptor.result(for: store).first?.quantity.doubleValue(for: unit)
     }
 
-    /// Average of a discrete quantity type in a date range (used for HRV / resting HR baselines).
+    // Computes the average value of a quantity type over a date range
     public func averageQuantity(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit, from start: Date, to end: Date) async throws -> Double? {
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
         let descriptor = HKStatisticsQueryDescriptor(
@@ -296,7 +278,7 @@ public final class HealthKitManager {
         return try await descriptor.result(for: store)?.averageQuantity()?.doubleValue(for: unit)
     }
 
-    /// "Female" / "Male" matching ProfileOptions.genders, or nil if not set in Health.
+    // Retrieves biological sex from Apple Health profile
     public func biologicalSexDescription() -> String? {
         guard let sex = try? store.biologicalSex().biologicalSex else { return nil }
         switch sex {
@@ -307,8 +289,7 @@ public final class HealthKitManager {
         }
     }
 
-    // MARK: - Workouts (read)
-
+    // Fetches recorded workouts within a date range
     public func fetchWorkouts(from start: Date, to end: Date) async throws -> [HealthWorkout] {
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
         let descriptor = HKSampleQueryDescriptor(
@@ -347,9 +328,7 @@ public final class HealthKitManager {
         }
     }
 
-    // MARK: - Workouts (write)
-
-    /// Saves a workout logged in the app into Apple Health. Returns the HealthKit UUID.
+    // Saves a logged workout to Apple Health and returns its UUID
     public func saveWorkout(
         sport: String,
         intensity: IntensityLevel,
@@ -384,7 +363,7 @@ public final class HealthKitManager {
         return workout?.uuid
     }
 
-    /// Deletes a workout previously saved to Apple Health by its UUID.
+    // Deletes a workout from Apple Health using its UUID
     public func deleteWorkout(uuid: UUID) async throws {
         guard isAvailable, canSaveWorkouts else { return }
         let predicate = HKQuery.predicateForObject(with: uuid)
@@ -398,8 +377,7 @@ public final class HealthKitManager {
         }
     }
 
-    // MARK: - Mapping helpers
-
+    // Maps a sport name to a HealthKit workout activity type
     public static func activityType(for sport: String) -> HKWorkoutActivityType {
         switch sport {
         case "Powerlifting", "Bodybuilding", "Weightlifting", "Strength Training":
@@ -416,6 +394,7 @@ public final class HealthKitManager {
         }
     }
 
+    // Maps a HealthKit workout activity type to a sport name
     public static func sportName(for type: HKWorkoutActivityType) -> String {
         switch type {
         case .traditionalStrengthTraining: return "Strength Training"
@@ -433,6 +412,7 @@ public final class HealthKitManager {
         }
     }
 
+    // Estimates workout intensity from calorie burn and duration
     private static func estimateIntensity(kilocalories: Double?, minutes: Int) -> IntensityLevel {
         guard let kcal = kilocalories, minutes > 0 else { return .medium }
         let perMinute = kcal / Double(minutes)

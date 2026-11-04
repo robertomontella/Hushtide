@@ -13,8 +13,6 @@ public struct IntensitySelectorView: View {
     }
     
     public var body: some View {
-        // 4 Intensity Cards in increasing order (Rest -> Light -> Medium -> Hard)
-        // Automatically activated based on Readiness score (read-only indicator)
         HStack(spacing: 10) {
             ForEach(IntensityLevel.allCases) { level in
                 let isRecommended = (recommendedIntensity == level)

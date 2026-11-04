@@ -5,18 +5,15 @@ public struct SummaryDetailChartView: View {
     @Environment(\.appReduceMotion) private var appReduceMotion
     public let selectedMetric: SummaryMetricTab
     
-    // Quality dynamic data
     public var qualityAverage: Int = 88
     public var qualityTarget: Int = 85
     public var qualityPercentages: [Int] = [86, 72, 92, 80, 90, 96, 88]
     
-    // Sleep dynamic data (synchronized with SleepModel)
     public var sleepAverageFormatted: String = "7h 45m"
     public var sleepTargetFormatted: String = "8h"
     public var sleepMinutesPerDay: [Int] = [465, 390, 465, 480, 435, 510, 480]
     public var sleepTargetMinutes: Int = 480
     
-    // Training dynamic data (calculated from logged workouts)
     public var trainingAverageFormatted: String = "31m"
     public var trainingTargetFormatted: String = "21m"
     public var trainingMinutesPerDay: [Int] = [50, 30, 60, 30, 50, 0, 0]
@@ -24,19 +21,17 @@ public struct SummaryDetailChartView: View {
     
     public var onEditTarget: (() -> Void)? = nil
     
-    // MARK: - Theme Colors
     private var themeColor: Color {
         switch selectedMetric {
         case .quality:
-            return Color(red: 3/255.0, green: 199/255.0, blue: 190/255.0)  // Teal / Mint
+            return Color(red: 3/255.0, green: 199/255.0, blue: 190/255.0)
         case .sleep:
-            return Color(red: 88/255.0, green: 86/255.0, blue: 215/255.0)    // Indigo / Purple
+            return Color(red: 88/255.0, green: 86/255.0, blue: 215/255.0)
         case .training:
-            return Color(red: 1/255.0, green: 113/255.0, blue: 227/255.0) // System Blue
+            return Color(red: 1/255.0, green: 113/255.0, blue: 227/255.0)
         }
     }
     
-    // MARK: - Header Titles & Subtitles
     private var headerSubtitle: String {
         return "DAILY AVERAGE"
     }
@@ -57,10 +52,8 @@ public struct SummaryDetailChartView: View {
         }
     }
     
-    // MARK: - 7 Days Data (Monday to Sunday)
     private let dayLetters = ["M", "T", "W", "T", "F", "S", "S"]
     
-    // Target dashed line height (from bottom of chart)
     private var targetLineYOffset: CGFloat {
         switch selectedMetric {
         case .quality: return 75
@@ -123,7 +116,6 @@ public struct SummaryDetailChartView: View {
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // MARK: - Header Information
             VStack(alignment: .leading, spacing: 4) {
                 Text(headerSubtitle)
                     .font(.system(size: 11, weight: .bold))
@@ -135,7 +127,6 @@ public struct SummaryDetailChartView: View {
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    // Static Target Capsule (Not clickable, target changes made via double-clicking cards)
                     HStack(spacing: 5) {
                         Text(targetValueText)
                             .font(.system(size: 13.5, weight: .semibold))
@@ -150,13 +141,10 @@ public struct SummaryDetailChartView: View {
                 }
             }
             
-            // MARK: - Bar Chart Area
             ZStack(alignment: .bottom) {
-                // Horizontal Target Dashed Line
                 targetDashedLine
-                    .padding(.bottom, targetLineYOffset + 24) // offset above day labels
+                    .padding(.bottom, targetLineYOffset + 24)
                 
-                // 7 Vertical Day Columns
                 HStack(alignment: .bottom, spacing: 0) {
                     ForEach(0..<7, id: \.self) { index in
                         dayBarColumn(index: index)
@@ -174,7 +162,6 @@ public struct SummaryDetailChartView: View {
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
                 .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
         )
-        // Accent border matching the active metric
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(themeColor, lineWidth: appHighContrast ? 3.0 : 2.0)
@@ -182,7 +169,6 @@ public struct SummaryDetailChartView: View {
         .animation(appReduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: selectedMetric)
     }
     
-    // MARK: - Column for a single day (Bar + Day Letter + Optional Percentage)
     @ViewBuilder
     private func dayBarColumn(index: Int) -> some View {
         let height: CGFloat = {
@@ -205,7 +191,7 @@ public struct SummaryDetailChartView: View {
                 guard index < trainingMinutesPerDay.count else { return 8 }
                 let val = CGFloat(trainingMinutesPerDay[index])
                 if val <= 0 {
-                    return 8 // Subtle resting capsule height
+                    return 8
                 }
                 let target = CGFloat(max(1, trainingDailyTargetMinutes))
                 let computed = (val / target) * targetLineYOffset
@@ -214,7 +200,6 @@ public struct SummaryDetailChartView: View {
         }()
         
         VStack(spacing: 6) {
-            // If Quality is selected, display percentage label above the bar
             if selectedMetric == .quality && index < qualityPercentages.count {
                 Text("\(qualityPercentages[index])%")
                     .font(.system(size: 9.5, weight: .bold))
@@ -225,21 +210,18 @@ public struct SummaryDetailChartView: View {
                     .frame(height: 12)
             }
             
-            // Vertical Rounded Bar
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(themeColor)
                 .frame(width: 22, height: height)
                 .animation(appReduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.78), value: height)
                 .animation(appReduceMotion ? nil : .easeInOut(duration: 0.25), value: themeColor)
             
-            // Day Letter Label
             Text(dayLetters[index])
                 .font(.system(size: 13.5, weight: .bold))
                 .foregroundColor(.primary)
         }
     }
     
-    // MARK: - Horizontal Dashed Target Line
     private var targetDashedLine: some View {
         Line()
             .stroke(
@@ -250,7 +232,6 @@ public struct SummaryDetailChartView: View {
     }
 }
 
-// MARK: - Simple Horizontal Line Shape for Target
 private struct Line: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()

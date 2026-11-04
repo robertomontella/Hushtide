@@ -7,21 +7,16 @@ public struct ProfileView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable public var viewModel: TrainingModel
     
-    // Active sheet for interactive editing
     @State private var activeSheet: ActiveProfileSheet? = nil
     
-    // Photo picker state
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     
-    // Name editing state
     @State private var isEditingNameAlert: Bool = false
     @State private var newNameDraft: String = ""
     
-    // Custom sport entry state inside Sport Type sheet
     @State private var isAddingCustomSport: Bool = false
     @State private var customSportDraft: String = ""
     
-    // Selection state variables for all vertical wheel pickers
     @State private var selectedSportType: String = "Running"
     @State private var selectedTrainingLevel: String = "Advanced"
     @State private var selectedFrequency: String = "3"
@@ -30,11 +25,9 @@ public struct ProfileView: View {
     @State private var weightDecimal: Int = 0
     @State private var selectedHeightCm: Int = 165
     
-    // Apple Health & Apple ID synchronization state & sheets
     @State private var isRemoveSyncConfirmationPresented: Bool = false
     @State private var isHealthAccessSheetPresented: Bool = false
     
-    // HealthKit permissions individual toggles (Official Apple Health Access style)
     @State private var allowWriteWorkouts: Bool = true
     @State private var allowReadSleep: Bool = true
     @State private var allowReadWorkouts: Bool = true
@@ -59,21 +52,16 @@ public struct ProfileView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // MARK: - Custom Top Bar with Circular Back Button `<`
                     topNavBar
                     
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 20) {
-                            // MARK: - Profile Header (Native SwiftUI Avatar + Username)
                             profileHeaderSection
                             
-                            // MARK: - Section: YOUR SPORT
                             yourSportSection
                             
-                            // MARK: - Section: ABOUT YOU
                             aboutYouSection
                             
-                            // MARK: - Footer (Sign in with Apple + Info)
                             footerSection
                             
                             Spacer().frame(height: 24)
@@ -85,7 +73,6 @@ public struct ProfileView: View {
             }
             .navigationBarHidden(true)
         }
-        // Name Editing Alert
         .alert("Edit Your Name", isPresented: $isEditingNameAlert) {
             TextField("Name", text: $newNameDraft)
             Button("Cancel", role: .cancel) {}
@@ -95,18 +82,15 @@ public struct ProfileView: View {
         } message: {
             Text("Enter the name you'd like displayed on your profile.")
         }
-        // Interactive Editing Bottom Sheets with Vertical Wheel Pickers
         .sheet(item: $activeSheet) { sheet in
             sheetContent(for: sheet)
                 .presentationDetents(sheet.detents)
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color(uiColor: .systemBackground))
         }
-        // Native Apple Health Access Permission Sheet
         .sheet(isPresented: $isHealthAccessSheetPresented) {
             healthAccessSheet
         }
-        // Handle PhotosPicker photo selection
         .onChange(of: selectedPhotoItem) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self) {
@@ -116,7 +100,6 @@ public struct ProfileView: View {
         }
     }
     
-    // MARK: - Top Navigation Bar
     private var topNavBar: some View {
         HStack {
             Button {
@@ -139,7 +122,6 @@ public struct ProfileView: View {
             
             Spacer()
             
-            // Settings Button
             NavigationLink {
                 SettingsView(viewModel: viewModel)
             } label: {
@@ -162,7 +144,6 @@ public struct ProfileView: View {
         .padding(.bottom, 2)
     }
     
-    // MARK: - Profile Header Section (Profile Photo + Username)
     private var profileHeaderSection: some View {
         VStack(spacing: 10) {
             Text(viewModel.profileTitle)
@@ -170,7 +151,6 @@ public struct ProfileView: View {
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
             
-            // Centered Circular Profile Photo (Tap to change photo via PhotosPicker)
             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                 ZStack(alignment: .bottomTrailing) {
                     if let data = viewModel.profileCustomImageData, let uiImage = UIImage(data: data) {
@@ -189,7 +169,6 @@ public struct ProfileView: View {
                             .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
                     }
                     
-                    // Edit pencil indicator badge
                     ZStack {
                         Circle()
                             .fill(Color(uiColor: .secondarySystemGroupedBackground))
@@ -221,7 +200,6 @@ public struct ProfileView: View {
                 }
             }
             
-            // Username (Tap to Edit)
             Button {
                 newNameDraft = (viewModel.userName == "-" ? "" : viewModel.userName)
                 isEditingNameAlert = true
@@ -242,7 +220,6 @@ public struct ProfileView: View {
         .padding(.top, 2)
     }
     
-    // MARK: - Section: YOUR SPORT (All Vertical Wheel Pickers)
     private var yourSportSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("YOUR SPORT")
@@ -299,7 +276,6 @@ public struct ProfileView: View {
         }
     }
     
-    // MARK: - Section: ABOUT YOU (All Vertical Wheel Pickers)
     private var aboutYouSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("ABOUT YOU")
@@ -356,11 +332,9 @@ public struct ProfileView: View {
         }
     }
     
-    // MARK: - Footer Section (Official "Sign in with Apple" Badge)
     private var footerSection: some View {
         VStack(spacing: 12) {
             if viewModel.isAppleIdSignedIn {
-                // Synchronized State: Premium Apple Badge showing active synchronization
                 Button {
                     HapticManager.impact(.light)
                     Task {
@@ -405,7 +379,6 @@ public struct ProfileView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Apple synchronization active. Tap to sync now.")
                 
-                // Option to remove synchronization
                 Button(role: .destructive) {
                     HapticManager.impact(.light)
                     isRemoveSyncConfirmationPresented = true
@@ -421,8 +394,6 @@ public struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                // Official Native "Sign in with Apple" Badge
-                // Standard 12pt corner radius, adapts to Dark Mode (white badge) and Light Mode (black badge)
                 SignInWithAppleButton(
                     .signIn,
                     onRequest: { request in
@@ -462,11 +433,9 @@ public struct ProfileView: View {
         }
     }
     
-    // MARK: - Native Apple Health Access Permission Sheet
     private var healthAccessSheet: some View {
         NavigationStack {
             List {
-                // Header Information Section
                 Section {
                     VStack(alignment: .center, spacing: 14) {
                         ZStack {
@@ -492,7 +461,6 @@ public struct ProfileView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 12, trailing: 0))
                 }
                 
-                // Turn On All Section
                 Section {
                     HStack {
                         Text("Turn On All")
@@ -515,12 +483,10 @@ public struct ProfileView: View {
                     }
                 }
                 
-                // WRITE Data Section
                 Section(header: Text("ALLOW “RECOVERYAPP” TO WRITE:")) {
                     healthToggleRow(icon: "figure.run", color: .blue, title: "Workouts", isOn: $allowWriteWorkouts)
                 }
                 
-                // READ Data Section
                 Section(header: Text("ALLOW “RECOVERYAPP” TO READ:")) {
                     healthToggleRow(icon: "bed.double.fill", color: Color(red: 88/255, green: 86/255, blue: 215/255), title: "Sleep Analysis", isOn: $allowReadSleep)
                     healthToggleRow(icon: "figure.run", color: .blue, title: "Workouts", isOn: $allowReadWorkouts)
@@ -575,7 +541,6 @@ public struct ProfileView: View {
         }
     }
     
-    // MARK: - Sheet Builder for Interactive Vertical Wheel Pickers
     @ViewBuilder
     private func sheetContent(for sheet: ActiveProfileSheet) -> some View {
         NavigationStack {
@@ -664,7 +629,6 @@ public struct ProfileView: View {
         }
     }
     
-    // MARK: - Generic Text Wheel Picker
     @ViewBuilder
     private func wheelPickerSheetView(
         title: String,
@@ -681,7 +645,6 @@ public struct ProfileView: View {
                 .foregroundColor(.secondary)
                 .padding(.top, 10)
             
-            // Native Vertical Scrolling Wheel Picker
             Picker("", selection: selection) {
                 ForEach(options, id: \.self) { item in
                     Text(item)
@@ -733,7 +696,6 @@ public struct ProfileView: View {
         .navigationTitle(title)
     }
     
-    // MARK: - Numeric Wheel Picker (Weight & Height)
     @ViewBuilder
     private func numericWheelPickerSheetView(
         title: String,
@@ -749,7 +711,6 @@ public struct ProfileView: View {
                 .foregroundColor(.secondary)
                 .padding(.top, 14)
             
-            // Native Vertical Scrolling Wheel Picker with Numeric Range
             Picker("", selection: selection) {
                 ForEach(Array(range), id: \.self) { num in
                     Text("\(num) \(unit)")
@@ -785,7 +746,6 @@ public struct ProfileView: View {
         .navigationTitle(title)
     }
     
-    // MARK: - Weight Double Wheel Picker
     private var weightDoubleWheelPickerView: some View {
         VStack(spacing: 12) {
             Text("Select body weight (kg)")
@@ -794,7 +754,6 @@ public struct ProfileView: View {
                 .padding(.top, 14)
             
             HStack(spacing: 0) {
-                // Whole kg integer wheel
                 Picker("", selection: $weightWholeKg) {
                     ForEach(20...200, id: \.self) { kg in
                         Text("\(kg)")
@@ -805,7 +764,6 @@ public struct ProfileView: View {
                 .pickerStyle(.wheel)
                 .frame(maxWidth: .infinity)
                 
-                // Decimal tenths wheel (0, 0.1, 0.2, ... 0.9)
                 Picker("", selection: $weightDecimal) {
                     ForEach(0...9, id: \.self) { dec in
                         Text(dec == 0 ? "0" : "0.\(dec)")
@@ -843,7 +801,6 @@ public struct ProfileView: View {
         .navigationTitle("Weight")
     }
     
-    // MARK: - Weekly Frequency Wheel Picker
     private var frequencyWheelPickerView: some View {
         VStack(spacing: 12) {
             Text("Select Weekly Frequency")
@@ -851,7 +808,6 @@ public struct ProfileView: View {
                 .foregroundColor(.secondary)
                 .padding(.top, 14)
             
-            // Native Vertical Scrolling Wheel Picker
             Picker("", selection: $selectedFrequency) {
                 ForEach(ProfileOptions.frequencies, id: \.self) { item in
                     let label = item.contains("Everyday") ? item : (item.contains("week") ? item : "\(item)x week")
@@ -889,10 +845,8 @@ public struct ProfileView: View {
         .navigationTitle("Weekly Frequency")
     }
     
-    // MARK: - Avatar Customizer (SwiftUI Icons & Color Palettes)
     private var avatarCustomizationView: some View {
         VStack(spacing: 18) {
-            // Live Preview of Profile Icon
             ZStack {
                 Circle()
                     .fill(
@@ -914,7 +868,6 @@ public struct ProfileView: View {
             }
             .padding(.top, 6)
             
-            // Icon Selector (Horizontal Scroll with Clean Margins)
             VStack(alignment: .leading, spacing: 8) {
                 Text("CHOOSE SF SYMBOL ICON")
                     .font(.system(size: 12, weight: .bold))
@@ -949,7 +902,6 @@ public struct ProfileView: View {
                 }
             }
             
-            // Color Palette Selector
             VStack(alignment: .leading, spacing: 8) {
                 Text("THEME COLOR")
                     .font(.system(size: 12, weight: .bold))
@@ -982,15 +934,14 @@ public struct ProfileView: View {
     }
     
     private let colorPalette: [Color] = [
-        Color(red: 0.0, green: 0.48, blue: 1.0),   // Apple Blue
-        Color(red: 0.35, green: 0.34, blue: 0.84), // Indigo
-        Color(red: 0.69, green: 0.32, blue: 0.87), // Purple
-        Color(red: 1.0, green: 0.18, blue: 0.33),  // Rose/Pink
-        Color(red: 1.0, green: 0.58, blue: 0.0),   // Orange
-        Color(red: 0.20, green: 0.78, blue: 0.35)  // Green
+        Color(red: 0.0, green: 0.48, blue: 1.0),
+        Color(red: 0.35, green: 0.34, blue: 0.84),
+        Color(red: 0.69, green: 0.32, blue: 0.87),
+        Color(red: 1.0, green: 0.18, blue: 0.33),
+        Color(red: 1.0, green: 0.58, blue: 0.0),
+        Color(red: 0.20, green: 0.78, blue: 0.35)
     ]
     
-    // MARK: - Synchronizers & Number Parsers
     private func parseWeightNumber() {
         guard viewModel.weight != "-" else {
             weightWholeKg = 56
@@ -1058,7 +1009,6 @@ public struct ProfileView: View {
     }
 }
 
-// MARK: - Sheet Enum Helper
 private enum ActiveProfileSheet: Identifiable {
     case avatar
     case sportType

@@ -1,37 +1,25 @@
 import Foundation
 import HealthKit
 
-// MARK: - Recovery Input
-/// Encapsulates the inputs required by the recovery and readiness engine.
 public struct RecoveryInput {
-    /// Sleep night ending on the evaluated day (e.g. today / selected day)
     public var currentNight: SleepNight?
     
-    /// Recent nights of sleep (past 7 days)
     public var recentNights: [SleepNight]
     
-    /// User's target sleep goal in hours (e.g. 8.0)
     public var targetSleepHours: Double
     
-    /// Sleep hygiene checkmarks status for the day (e.g. bedtime, caffeine cutoff)
     public var checkmarks: [SleepCheckmarkItem]
     
-    /// Today's resting heart rate in bpm (from HealthKit)
     public var restingHeartRate: Double?
     
-    /// 30-day baseline average resting heart rate in bpm (from HealthKit)
     public var restingHeartRateBaseline: Double?
     
-    /// Today's HRV SDNN in ms (from HealthKit)
     public var heartRateVariability: Double?
     
-    /// 30-day baseline average HRV SDNN in ms (from HealthKit)
     public var heartRateVariabilityBaseline: Double?
     
-    /// Recent workouts (from HealthKit or app logs)
     public var recentWorkouts: [HealthWorkout]
     
-    /// Reference evaluation date (defaults to current time)
     public var evaluationDate: Date
     
     public init(
@@ -59,56 +47,38 @@ public struct RecoveryInput {
     }
 }
 
-// MARK: - Recovery Result
-/// Output returned by the recovery algorithm.
 public struct RecoveryResult: Equatable {
-    /// Overall Readiness score: 0 to 100
     public let readinessScore: Double
     
-    /// Rest Quality percentage: 0 to 100 (%)
     public let qualityScore: Int
     
-    /// Formatted Quality metric value (e.g. "88%")
     public var qualityFormatted: String { "\(qualityScore)%" }
     
-    /// Sleep Debt in minutes (negative = deficit, positive = surplus)
     public let sleepDebtMinutes: Int
     
-    /// Formatted Sleep Debt string (e.g. "-15m", "+30m", "0m")
     public let sleepDebtFormatted: String
     
-    /// Sleep Regularity classification (e.g. "On time", "Slightly off", "Irregular")
     public let regularityStatus: String
     
-    /// Sleep Regularity consistency score: 0 to 100
     public let regularityScore: Int
     
-    /// Recommended Training Intensity (.rest, .light, .medium, .hard)
     public let recommendedIntensity: IntensityLevel
     
-    /// Recovery status title (e.g. "Ready to push", "Moderate readiness", "Take it easy", "Needs rest")
     public let recoveryStatusTitle: String
     
-    /// Actionable recommendation explaining the recovery status and workout guidance
     public let recoveryRecommendation: String
 }
 
-// MARK: - Recovery Algorithm
-/// Simple, clean, and modular recovery engine.
 public enum RecoveryAlgorithm {
     
-    // MARK: - Main Evaluation Entry Point
-    
-    /// Evaluates all recovery inputs and produces readiness, quality, sleep debt, regularity, and intensity recommendations.
+    // Evaluates recovery inputs to generate readiness, quality, sleep debt, regularity, and recommendations
     public static func evaluate(input: RecoveryInput) -> RecoveryResult {
-        // Step 1: Compute Sleep Debt (target sleep vs actual sleep for selected day & weekly average)
         let (debtMinutes, debtFormatted, debtScore) = calculateSleepDebt(
             currentNight: input.currentNight,
             recentNights: input.recentNights,
             targetSleepHours: input.targetSleepHours
         )
         
-        // Step 2: Compute Rest Levels & Sleep Quality (duration sufficiency, efficiency, checkmarks compliance, resting HR)
         let (qualityScore, restLevelScore, checkmarksScore, checkmarksMet) = calculateRestQuality(
             currentNight: input.currentNight,
             targetSleepHours: input.targetSleepHours,
@@ -117,12 +87,10 @@ public enum RecoveryAlgorithm {
             restingHeartRateBaseline: input.restingHeartRateBaseline
         )
         
-        // Step 3: Compute Schedule Regularity (consistency of bedtime schedules)
         let (regularityStatus, regularityScore) = calculateRegularity(
             recentNights: input.recentNights
         )
         
-        // Step 4: Compute Overall Readiness Score (weighted combination + checkmarks + HRV + workout fatigue)
         let readinessScore = calculateReadinessScore(
             sleepDebtScore: debtScore,
             restLevelScore: restLevelScore,
@@ -134,7 +102,6 @@ public enum RecoveryAlgorithm {
             evaluationDate: input.evaluationDate
         )
         
-        // Step 5: Determine Recommended Training Intensity & Tailored Guidance
         let (intensity, title, recommendation) = makeRecommendations(
             readinessScore: readinessScore,
             debtMinutes: debtMinutes,
@@ -157,10 +124,7 @@ public enum RecoveryAlgorithm {
         )
     }
     
-    // MARK: - 1. Sleep Debt Calculation
-    
-    /// Compares actual sleep duration against the user's sleep need (target sleep hours).
-    /// Accurately reflects both acute today deficit/surplus and recent days accumulated debt.
+    // Calculates sleep debt based on daily sleep and weekly average against target hours
     public static func calculateSleepDebt(
         currentNight: SleepNight?,
         recentNights: [SleepNight],
@@ -168,11 +132,9 @@ public enum RecoveryAlgorithm {
     ) -> (debtMinutes: Int, formatted: String, score: Double) {
         let targetMinutes = Int((targetSleepHours * 60.0).rounded())
         
-        // Acute today sleep:
         let todayAsleep = currentNight?.asleepMinutes ?? 465
         let todayDebt = todayAsleep - targetMinutes
         
-        // Weekly average sleep:
         let weeklyAverageMinutes: Int
         if !recentNights.isEmpty {
             let total = recentNights.reduce(0) { $0 + $1.asleepMinutes }
@@ -182,13 +144,10 @@ public enum RecoveryAlgorithm {
         }
         let weeklyDebt = weeklyAverageMinutes - targetMinutes
         
-        // Effective debt blends acute day (65%) with weekly accumulated debt (35%):
         let effectiveDebt = Int(round(Double(todayDebt) * 0.65 + Double(weeklyDebt) * 0.35))
         
-        // Formatted display on UI directly reflects today's acute deficit/surplus:
         let formatted = formatDebt(minutes: todayDebt)
         
-        // Convert debt into a 0 to 100 score:
         let score: Double
         if effectiveDebt >= 0 {
             score = 100.0
@@ -201,7 +160,7 @@ public enum RecoveryAlgorithm {
         return (todayDebt, formatted, score)
     }
     
-    /// Formats minutes into a signed human-readable string (e.g. "-15m", "+30m", "0m")
+    // Formats sleep debt minutes into a signed display string
     public static func formatDebt(minutes: Int) -> String {
         let sign = minutes < 0 ? "-" : "+"
         let absVal = abs(minutes)
@@ -215,11 +174,7 @@ public enum RecoveryAlgorithm {
         }
     }
     
-    // MARK: - 2. Rest Level & Sleep Quality Calculation
-    
-    /// Evaluates restfulness through duration sufficiency, sleep efficiency,
-    /// sleep hygiene checkmarks compliance, and physiological rest indicators.
-    /// Formula rewritten to be highly responsive to sleep duration and checkmarks status.
+    // Computes sleep quality score from duration sufficiency, efficiency, checkmarks compliance, and resting heart rate
     public static func calculateRestQuality(
         currentNight: SleepNight?,
         targetSleepHours: Double = 8.0,
@@ -235,8 +190,6 @@ public enum RecoveryAlgorithm {
         let actualAsleep = Double(currentNight.asleepMinutes)
         let actualInBed = Double(max(currentNight.inBedMinutes, Int(actualAsleep)))
         
-        // Component A: Sleep Duration Sufficiency (responsive power curve)
-        // 100% on target -> 100.0, 7h/8h -> 81.8, 6h/8h -> 64.9, 5h/8h -> 49.4, 4h/8h -> 35.3
         let durationRatio = actualAsleep / targetMinutes
         let durationScore: Double
         if durationRatio >= 1.0 {
@@ -245,8 +198,6 @@ public enum RecoveryAlgorithm {
             durationScore = max(0.0, pow(durationRatio, 1.5) * 100.0)
         }
         
-        // Component B: Sleep Hygiene Checkmarks Compliance (strong direct impact)
-        // Full completion gives 100%, each unchecked checkmark significantly lowers the score
         let checkmarksScore: Double
         let checkmarksMet: Bool
         if !checkmarks.isEmpty {
@@ -259,11 +210,9 @@ public enum RecoveryAlgorithm {
             checkmarksMet = true
         }
         
-        // Component C: Sleep Efficiency (asleep time / time in bed)
         let rawEff = (actualAsleep / max(1.0, actualInBed)) * 100.0
         let efficiencyScore = max(0.0, min(100.0, (rawEff / 90.0) * 100.0))
         
-        // Component D: Physiological Rest (RHR recovery or baseline fallback)
         let physioScore: Double
         if let rhr = restingHeartRate, let baseline = restingHeartRateBaseline, rhr > 0, baseline > 0 {
             let ratio = baseline / rhr
@@ -272,10 +221,6 @@ public enum RecoveryAlgorithm {
             physioScore = 90.0
         }
         
-        // Rewritten Weighted Synthesis:
-        // Duration Sufficiency: 60%
-        // Checkmarks Compliance: 30%
-        // Sleep Efficiency & Rest Factor: 10%
         let restFactor = (efficiencyScore * 0.5) + (physioScore * 0.5)
         let weighted = (durationScore * 0.60) + (checkmarksScore * 0.30) + (restFactor * 0.10)
         let finalQuality = max(0, min(100, Int(round(weighted))))
@@ -283,7 +228,7 @@ public enum RecoveryAlgorithm {
         return (finalQuality, Double(finalQuality), checkmarksScore, checkmarksMet)
     }
     
-    /// Backwards-compatible convenience overload for callers expecting a 2-tuple.
+    // Computes sleep quality score without checkmark compliance metrics
     public static func calculateRestQuality(
         currentNight: SleepNight?,
         restingHeartRate: Double?,
@@ -299,12 +244,7 @@ public enum RecoveryAlgorithm {
         return (res.qualityScore, res.restLevelScore)
     }
     
-    // MARK: - 3. Sleep Regularity Calculation
-    
-    /// Evaluates the consistency of bedtime schedules across recent nights.
-    /// Returns:
-    /// - `status`: classification label ("On time", "Slightly off", "Irregular")
-    /// - `score`: 0 to 100 consistency score
+    // Evaluates bedtime schedule consistency across recent nights
     public static func calculateRegularity(
         recentNights: [SleepNight]
     ) -> (status: String, score: Int) {
@@ -313,7 +253,6 @@ public enum RecoveryAlgorithm {
         }
         
         let calendar = Calendar.current
-        // Convert bedtimes to minutes from 18:00 (6 PM) to handle midnight wrap smoothly
         let bedtimeOffsets: [Double] = recentNights.map { night in
             let hour = calendar.component(.hour, from: night.bedtime)
             let minute = calendar.component(.minute, from: night.bedtime)
@@ -322,15 +261,10 @@ public enum RecoveryAlgorithm {
             return offset
         }
         
-        // Compute standard deviation of bedtime offsets
         let mean = bedtimeOffsets.reduce(0, +) / Double(bedtimeOffsets.count)
         let variance = bedtimeOffsets.reduce(0) { $0 + pow($1 - mean, 2) } / Double(bedtimeOffsets.count)
         let standardDeviation = variance.squareRoot()
         
-        // Classify consistency:
-        // Under 30 min variation -> "On time" (score: 95)
-        // 30 to 60 min variation -> "Slightly off" (score: 75)
-        // Over 60 min variation  -> "Irregular" (score: 55)
         if standardDeviation < 30.0 {
             return ("On time", 95)
         } else if standardDeviation < 60.0 {
@@ -340,10 +274,7 @@ public enum RecoveryAlgorithm {
         }
     }
     
-    // MARK: - 4. Overall Readiness Score Calculation
-    
-    /// Combines Sleep Debt, Rest Quality, Checkmarks Compliance, Regularity, and Heart Rate Variability (HRV),
-    /// factoring in recent high-intensity workout fatigue.
+    // Computes overall readiness score from sleep debt, rest quality, checkmarks, HRV, and workout fatigue
     public static func calculateReadinessScore(
         sleepDebtScore: Double,
         restLevelScore: Double,
@@ -356,21 +287,15 @@ public enum RecoveryAlgorithm {
     ) -> Double {
         var weightedParts: [(score: Double, weight: Double)] = []
         
-        // 1. Sleep Debt & Duration Factor (35% weight)
         weightedParts.append((sleepDebtScore, 0.35))
         
-        // 2. Rest Level & Sleep Quality Factor (35% weight)
         weightedParts.append((restLevelScore, 0.35))
         
-        // 3. Sleep Hygiene Checkmarks Compliance (15% weight)
         weightedParts.append((checkmarksScore, 0.15))
         
-        // 4. Regularity Factor (15% weight)
         weightedParts.append((Double(regularityScore), 0.15))
         
-        // 5. Autonomic Recovery / Heart Rate Variability (15% weight)
         if let hrv = hrv, let base = hrvBaseline, base > 0, hrv > 0 {
-            // Ratio > 1.0 indicates higher parasympathetic activity
             let ratio = hrv / base
             let hrvScore = max(20.0, min(100.0, 75.0 + (ratio - 1.0) * 125.0))
             weightedParts.append((hrvScore, 0.15))
@@ -379,16 +304,12 @@ public enum RecoveryAlgorithm {
         let totalWeight = weightedParts.reduce(0) { $0 + $1.weight }
         var score = weightedParts.reduce(0) { $0 + $1.score * $1.weight } / totalWeight
         
-        // Workout Recovery Load Modifier:
-        // If an intense/hard workout was logged recently, apply recovery buffer
         for workout in workouts {
             let secondsAgo = evaluationDate.timeIntervalSince(workout.end)
             if workout.intensity == .hard && secondsAgo >= 0 && secondsAgo < 12 * 3600 {
-                // Acute fatigue (workout finished within last 12 hours)
                 score -= 8.0
                 break
             } else if workout.intensity == .hard && secondsAgo >= 12 * 3600 && secondsAgo < 24 * 3600 {
-                // Residual fatigue (workout was 12 to 24 hours ago)
                 score -= 4.0
                 break
             }
@@ -397,7 +318,7 @@ public enum RecoveryAlgorithm {
         return max(0.0, min(100.0, score.rounded()))
     }
     
-    /// Backwards-compatible convenience overload for callers without explicit checkmarksScore.
+    // Computes overall readiness score without explicit checkmarks score
     public static func calculateReadinessScore(
         sleepDebtScore: Double,
         restLevelScore: Double,
@@ -419,10 +340,7 @@ public enum RecoveryAlgorithm {
         )
     }
     
-    // MARK: - 5. Training Intensity Recommendations
-    
-    /// Generates the recommended training intensity (.rest, .light, .medium, .hard),
-    /// recovery status title, and personalized advice addressing sleep debt, rest levels, checkmarks, or regularity.
+    // Determines recommended training intensity and guidance based on recovery metrics
     public static func makeRecommendations(
         readinessScore: Double,
         debtMinutes: Int,
@@ -495,10 +413,8 @@ public enum RecoveryAlgorithm {
     }
 }
 
-// MARK: - Model Integration Bridges
-
 extension LoggedWorkout {
-    /// Bridges LoggedWorkout into HealthWorkout so the algorithm can evaluate recent workout load.
+    // Converts a logged workout into a health workout for recovery evaluation
     public func toHealthWorkout() -> HealthWorkout {
         let end = scheduledDate.addingTimeInterval(TimeInterval(max(1, durationMinutes) * 60))
         return HealthWorkout(
@@ -517,10 +433,10 @@ extension LoggedWorkout {
 }
 
 extension SleepModel {
-    /// Bridges weekly sleep records & bedtime schedules into SleepNight objects for algorithm evaluation.
+    // Converts weekly sleep records into sleep night objects for algorithm evaluation
     public func toSleepNights() -> [SleepNight] {
         var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday
+        calendar.firstWeekday = 2
         let now = Date()
         let today = calendar.startOfDay(for: now)
         let weekday = calendar.component(.weekday, from: now)
